@@ -89,9 +89,18 @@ class MockCppEngine:
     """Fallback Python engine if C++ shared library fails to load."""
     def process_attempt(self, q_ids, opts, count, score_out, total_out):
         total = float(count * 10.0)
-        # Simple fallback evaluation: give full points or mock it safely
-        score_out.value = total
-        total_out.value = total
+        score = total  # Full points for fallback evaluation
+        
+        # Safely handle ctypes pointers passed via ctypes.byref()
+        if hasattr(score_out, 'contents'):
+            score_out.contents.value = score
+        else:
+            score_out.value = score
+            
+        if hasattr(total_out, 'contents'):
+            total_out.contents.value = total
+        else:
+            total_out.value = total
 
     def add_custom_question(self, q_id, prompt, o1, o2, o3, o4, c_idx, pts):
         pass
@@ -208,12 +217,14 @@ if nav == "Student Portal":
             total_out = ctypes.c_double(0.0)
 
             # Call C++ DLL backend
-            cpp_engine.process_attempt(
-                q_ids, 
-                opts, 
-                len(q_ids_list), 
-                ctypes.byref(score_out), 
-                ctypes.byref(total_out)
+        if hasattr(cpp_engine, "process_attempt"):
+                cpp_engine.process_attempt(
+                    q_ids, 
+                    opts, 
+                    len(q_ids_list), 
+                    ctypes.byref(score_out), 
+                    ctypes.byref(total_out)
+                )
             )
 
             score = score_out.value
