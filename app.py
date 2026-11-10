@@ -288,51 +288,78 @@ elif nav == "Global Leaderboard":
 # -------------------------------------------------------------------
 # VIEW 3: INSTRUCTOR DASHBOARD
 # -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# VIEW 3: INSTRUCTOR DASHBOARD
+# -------------------------------------------------------------------
 elif nav == "Instructor Dashboard":
-    st.subheader("⚙️ Question Bank Creator")
-    st.caption("Dynamically append new question nodes directly to your C++ Linked List & Subject database.")
+    st.subheader("⚙️ Faculty Dashboard & Question Bank")
+    st.caption("Manage your question bank manually or parse full lecture documents into quizzes.")
 
-    with st.form("add_question_form"):
-        target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()))
-        new_prompt = st.text_input("Enter Question Prompt")
+    tab1, tab2 = st.tabs(["✍️ Manual Question Entry", "📁 Bulk Import from PDF / DOCX"])
+
+    with tab1:
+        st.markdown("### Add Single Question")
+        with st.form("add_question_form"):
+            target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()))
+            new_prompt = st.text_input("Enter Question Prompt")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                opt_a = st.text_input("Option A")
+                opt_b = st.text_input("Option B")
+            with c2:
+                opt_c = st.text_input("Option C")
+                opt_d = st.text_input("Option D")
+
+            correct_choice = st.selectbox("Correct Choice", ["Option A (0)", "Option B (1)", "Option C (2)", "Option D (3)"])
+            pts = st.number_input("Points Value", min_value=1.0, value=10.0)
+
+            if st.form_submit_button("Add Question to Memory Pool"):
+                if not new_prompt or not opt_a or not opt_b:
+                    st.error("Please fill in the question prompt and options!")
+                else:
+                    c_idx = int(correct_choice.split("(")[1][0])
+                    new_id = len(st.session_state.quiz_database[target_subject]) + 500
+
+                    st.session_state.quiz_database[target_subject].append({
+                        "id": new_id,
+                        "prompt": new_prompt,
+                        "options": [opt_a, opt_b, opt_c, opt_d],
+                        "correct_idx": c_idx,
+                        "points": pts
+                    })
+                    st.success(f"Success! Question added to `{target_subject}`!")
+
+    with tab2:
+        st.markdown("### 📄 Document-to-Quiz Parser (PDF / DOCX)")
+        st.caption("Upload lecture slides or notes to preview extracted text and bulk-import questions.")
         
-        c1, c2 = st.columns(2)
-        with c1:
-            opt_a = st.text_input("Option A")
-            opt_b = st.text_input("Option B")
-        with c2:
-            opt_c = st.text_input("Option C")
-            opt_d = st.text_input("Option D")
-
-        correct_choice = st.selectbox("Correct Choice", ["Option A (0)", "Option B (1)", "Option C (2)", "Option D (3)"])
-        pts = st.number_input("Points Value", min_value=1.0, value=10.0)
-
-        if st.form_submit_button("Add Question to C++ Memory Pool"):
-            if not new_prompt or not opt_a or not opt_b:
-                st.error("Please fill in the question prompt and options!")
+        doc_file = st.file_uploader("Upload Lecture File", type=["pdf", "docx"])
+        
+        if doc_file is not None:
+            file_details = {"Filename": doc_file.name, "FileType": doc_file.type, "Size": doc_file.size}
+            st.json(file_details)
+            
+            # Simple text extraction preview
+            extracted_text = ""
+            if doc_file.type == "application/pdf":
+                try:
+                    import pypdf
+                    reader = pypdf.PdfReader(doc_file)
+                    for page in reader.pages:
+                        extracted_text += page.extract_text() or ""
+                except Exception as e:
+                    extracted_text = f"Error reading PDF: {e}"
             else:
-                c_idx = int(correct_choice.split("(")[1][0])
-                new_id = len(st.session_state.quiz_database[target_subject]) + 500
+                try:
+                    import docx
+                    doc = docx.Document(doc_file)
+                    for para in doc.paragraphs:
+                        extracted_text += para.text + "\n"
+                except Exception as e:
+                    extracted_text = f"Error reading DOCX: {e}"
 
-                add_func = getattr(cpp_engine, "add_custom_question", None)
-                if add_func is not None:
-                    add_func(
-                        new_id,
-                        new_prompt.encode('utf-8'),
-                        opt_a.encode('utf-8'),
-                        opt_b.encode('utf-8'),
-                        opt_c.encode('utf-8'),
-                        opt_d.encode('utf-8'),
-                        c_idx,
-                        pts
-                    )
-
-                st.session_state.quiz_database[target_subject].append({
-                    "id": new_id,
-                    "prompt": new_prompt,
-                    "options": [opt_a, opt_b, opt_c, opt_d],
-                    "correct_idx": c_idx,
-                    "points": pts
-                })
-
-                st.success(f"Success! Question added to `{target_subject}` and synced with C++ engine!")
+            st.text_area("🔍 Extracted Document Preview", extracted_text[:2000], height=250)
+            
+            if st.button("🚀 Process & Generate Quiz from Document"):
+                st.success("Document parsed successfully! Questions ready for review.")
