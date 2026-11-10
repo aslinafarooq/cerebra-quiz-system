@@ -15,48 +15,51 @@ st.set_page_config(
 st.markdown("""
     <style>
         .stApp {
-            background-color: #F8FAFC !important;
+            background: linear-gradient(135deg, #E6FFFA 0%, #E0F2FE 50%, #F5F3FF 100%) !important;
         }
         .app-header {
-            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-            padding: 2rem;
-            border-radius: 16px;
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+            padding: 2.2rem;
+            border-radius: 20px;
             color: white !important;
-            box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4);
+            box-shadow: 0 12px 30px -5px rgba(99, 102, 241, 0.4);
             margin-bottom: 2rem;
         }
         .app-header h1 {
             color: #FFFFFF !important;
-            font-size: 2.3rem !important;
+            font-size: 2.6rem !important;
             font-weight: 800 !important;
             margin: 0 !important;
         }
         .app-header p {
-            color: #E0E7FF !important;
-            font-size: 1.05rem !important;
-            margin-top: 0.4rem !important;
+            color: #F3E8FF !important;
+            font-size: 1.1rem !important;
+            margin-top: 0.5rem !important;
         }
         div[role="radiogroup"] {
-            background: white;
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid #E2E8F0;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(178, 245, 234, 0.6);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
         }
         .stButton>button, .stFormSubmitButton>button {
-            background: linear-gradient(90deg, #4F46E5 0%, #7C3AED 100%) !important;
+            background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%) !important;
             color: white !important;
             border: none !important;
-            padding: 0.6rem 1.5rem !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+            padding: 0.65rem 1.6rem !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
         }
         div[data-testid="stMetric"] {
-            background-color: #FFFFFF !important;
-            border-radius: 12px !important;
-            padding: 1rem !important;
-            border-left: 5px solid #4F46E5 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            backdrop-filter: blur(10px);
+            border-radius: 14px !important;
+            padding: 1.2rem !important;
+            border-left: 6px solid #319795 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
         }
     </style>
 """, unsafe_allow_html=True)
