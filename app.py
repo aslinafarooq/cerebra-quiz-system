@@ -224,7 +224,6 @@ if nav == "Student Portal":
                     len(q_ids_list), 
                     ctypes.byref(score_out), 
                     ctypes.byref(total_out)
-                )
             )
 
             score = score_out.value
