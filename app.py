@@ -89,16 +89,11 @@ class MockCppEngine:
         total = float(count * 10.0)
         score = total  # Full points for fallback evaluation
         
-        # Safely handle ctypes pointers passed via ctypes.byref()
-        if hasattr(score_out, 'contents'):
-            score_out.contents.value = score
-        else:
-            score_out.value = score
-            
-        if hasattr(total_out, 'contents'):
-            total_out.contents.value = total
-        else:
-            total_out.value = total
+        score_out.value = score
+        total_out.value = total
+
+    def add_custom_question(self, q_id, prompt, o1, o2, o3, o4, c_idx, pts):
+        pass
 
     def add_custom_question(self, q_id, prompt, o1, o2, o3, o4, c_idx, pts):
         pass
@@ -216,13 +211,24 @@ if nav == "Student Portal":
 
             # Call C++ DLL backend or Python fallback safely
             if hasattr(cpp_engine, "process_attempt"):
-                cpp_engine.process_attempt(
-                    q_ids, 
-                    opts, 
-                    len(q_ids_list), 
-                    ctypes.byref(score_out), 
-                    ctypes.byref(total_out)
-                )
+                if isinstance(cpp_engine, MockCppEngine):
+                    # Python fallback takes the c_double objects directly
+                    cpp_engine.process_attempt(
+                        q_ids, 
+                        opts, 
+                        len(q_ids_list), 
+                        score_out, 
+                        total_out
+                    )
+                else:
+                    # Real C DLL requires pointers via ctypes.byref()
+                    cpp_engine.process_attempt(
+                        q_ids, 
+                        opts, 
+                        len(q_ids_list), 
+                        ctypes.byref(score_out), 
+                        ctypes.byref(total_out)
+                    )
 
             score = score_out.value
             total = total_out.value
