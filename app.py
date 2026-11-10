@@ -1,6 +1,7 @@
 import os
 import sys
 import ctypes
+import subprocess
 import streamlit as st
 
 # -------------------------------------------------------------------
@@ -64,9 +65,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------------------------------------------
-# 2. C++ ENGINE LOADER
-# -------------------------------------------------------------------
 # -------------------------------------------------------------------
 # 2. CROSS-PLATFORM C++ ENGINE LOADER WITH PYTHON FALLBACK
 # -------------------------------------------------------------------
@@ -216,15 +214,15 @@ if nav == "Student Portal":
             score_out = ctypes.c_double(0.0)
             total_out = ctypes.c_double(0.0)
 
-            # Call C++ DLL backend
-        if hasattr(cpp_engine, "process_attempt"):
+            # Call C++ DLL backend or Python fallback safely
+            if hasattr(cpp_engine, "process_attempt"):
                 cpp_engine.process_attempt(
                     q_ids, 
                     opts, 
                     len(q_ids_list), 
                     ctypes.byref(score_out), 
                     ctypes.byref(total_out)
-            )
+                )
 
             score = score_out.value
             total = total_out.value
