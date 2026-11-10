@@ -140,7 +140,7 @@ if "quiz_database" not in st.session_state or "leaderboard" not in st.session_st
 # -------------------------------------------------------------------
 st.markdown("""
     <div class="app-header">
-        <h1>🎓 EduPulse Assessment Platform</h1>
+        <h1>🎓 Cerebra Assessment Platform</h1>
         <p>Powered by native C++ Dynamic Data Structures (Linked Lists, Stacks, Queues) & Streamlit</p>
     </div>
 """, unsafe_allow_html=True)
