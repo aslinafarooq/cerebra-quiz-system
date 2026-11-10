@@ -84,16 +84,37 @@ if not os.path.exists(lib_path) and os.path.exists(cpp_source):
         pass
 
 class MockCppEngine:
-    """Fallback Python engine if C++ shared library fails to load."""
+    """Smart Python fallback engine that actually grades quiz attempts."""
     def process_attempt(self, q_ids, opts, count, score_out, total_out):
-        total = float(count * 10.0)
-        score = total  # Full points for fallback evaluation
+        total = 0.0
+        score = 0.0
         
-        score_out.value = score
-        total_out.value = total
+        # Pull quiz database from Streamlit session state to check correct answers
+        quiz_db = st.session_state.get("quiz_database", {})
+        q_map = {}
+        for sub, q_list in quiz_db.items():
+            for q in q_list:
+                q_map[q["id"]] = {
+                    "correct_idx": q["correct_idx"], 
+                    "points": q.get("points", 10.0)
+                }
+        
+        # Evaluate each submitted question
+        for i in range(count):
+            qid = int(q_ids[i])
+            user_choice = int(opts[i])
+            
+            if qid in q_map:
+                pts = q_map[qid]["points"]
+                total += pts
+                if user_choice == q_map[qid]["correct_idx"]:
+                    score += pts
+            else:
+                total += 10.0
+                score += 10.0  # Safe default if question ID is custom/unmapped
 
-    def add_custom_question(self, q_id, prompt, o1, o2, o3, o4, c_idx, pts):
-        pass
+        score_out.value = float(score)
+        total_out.value = float(total)
 
     def add_custom_question(self, q_id, prompt, o1, o2, o3, o4, c_idx, pts):
         pass
