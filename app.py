@@ -7,7 +7,7 @@ import streamlit as st
 # 1. PAGE SETUP & INDIGO / VIOLET BRANDING
 # -------------------------------------------------------------------
 st.set_page_config(
-    page_title="EduPulse | Quiz Management System",
+    page_title="Cerebra | Quiz Management System",
     page_icon="🎓",
     layout="wide"
 )
