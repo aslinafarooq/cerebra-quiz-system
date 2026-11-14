@@ -209,9 +209,9 @@ if nav == "Student Portal":
 
     c1, c2 = st.columns(2)
     with c1:
-        student_name = st.text_input("Student Full Name", placeholder="e.g., Ayesha Shahbaz")
+        student_name = st.text_input("Student Full Name", placeholder="e.g., Ali")
     with c2:
-        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., CS-2026-88")
+        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., F25-")
 
     selected_subject = st.selectbox(
         "📚 Select Subject", 
