@@ -381,8 +381,8 @@ elif nav == "Instructor Dashboard":
                     st.success("Success! Question validated.")
 
     with tab2:
-        st.markdown("### 📄 Document-to-Quiz Parser (PDF / DOCX)")
-        st.caption("Upload lecture slides or notes to extract text and automatically push questions to Supabase.")
+        st.markdown("### 📄 Smart Document-to-Quiz Parser (PDF / DOCX)")
+        st.caption("Upload lecture sheets or MCQs (with a, b, c, d options and Answer keys) to automatically extract and push them to Supabase.")
         
         parse_subject = st.selectbox("Target Subject for Import", list(st.session_state.quiz_database.keys()), key="parser_sub")
         parse_quiz = st.selectbox("Target Quiz for Import", st.session_state.quiz_database[parse_subject], key="parser_quiz")
@@ -410,31 +410,74 @@ elif nav == "Instructor Dashboard":
 
             st.text_area("🔍 Extracted Document Preview", extracted_text[:2000], height=250)
             
-            if st.button("🚀 Process Document & Insert into Supabase"):
-                valid_lines = [line.strip() for line in extracted_text.split('\n') if len(line.strip()) > 15]
-                added_count = 0
+            if st.button("🚀 Parse Real MCQs & Insert into Supabase"):
+                import re
                 
-                for line in valid_lines[:15]:
-                    fake_options = [
-                        f"Valid Concept: {line[:30]}...",
-                        "Incorrect Alternate A",
-                        "Incorrect Alternate B",
-                        "None of the above"
-                    ]
-                    random.shuffle(fake_options)
-                    correct_index = fake_options.index(f"Valid Concept: {line[:30]}...")
+                # Split text into blocks or lines to parse structured MCQs
+                lines = [line.strip() for line in extracted_text.split('\n') if line.strip()]
+                
+                parsed_questions = []
+                current_q = None
+                current_options = []
+                correct_idx = 0
+                
+                for line in lines:
+                    # Detect question start (e.g., "1. What is...", "12. Process of...")
+                    q_match = re.match(r'^(\d+)[.)]\s+(.*)', line)
+                    if q_match:
+                        # Save previous question if exists
+                        if current_q and len(current_options) >= 2:
+                            parsed_questions.append({
+                                "prompt": current_q,
+                                "options": current_options[:4], # Keep up to 4 options
+                                "correct_idx": min(correct_idx, len(current_options)-1)
+                            })
+                        current_q = q_match.group(2)
+                        current_options = []
+                        correct_idx = 0
+                        continue
+                    
+                    # Detect options (e.g., "a) Push", "b) Pop", "A. Create")
+                    opt_match = re.match(r'^([a-dA-D])[.)]\s+(.*)', line)
+                    if opt_match and current_q:
+                        opt_text = opt_match.group(2)
+                        current_options.append(opt_text)
+                        continue
+                        
+                    # Detect answer key (e.g., "Answer: b", "Ans: a")
+                    ans_match = re.search(r'(?:Answer|Ans)[:\s]+([a-dA-D])', line, re.IGNORECASE)
+                    if ans_match and current_q:
+                        ans_char = ans_match.group(1).lower()
+                        correct_idx = ord(ans_char) - ord('a') # 'a'->0, 'b'->1, etc.
+                
+                # Append the last question
+                if current_q and len(current_options) >= 2:
+                    parsed_questions.append({
+                        "prompt": current_q,
+                        "options": current_options[:4],
+                        "correct_idx": min(correct_idx, len(current_options)-1)
+                    })
+                
+                added_count = 0
+                if not parsed_questions:
+                    st.warning("⚠️ Could not automatically detect structured MCQ patterns (e.g., '1. Question ... a) ... b) ... Answer: b'). Try a cleaner text layout.")
+                else:
+                    for pq in parsed_questions:
+                        # Ensure we have at least 4 options to keep quiz formatting consistent
+                        while len(pq["options"]) < 4:
+                            pq["options"].append(f"Alternate Option {len(pq['options']) + 1}")
+                            
+                        try:
+                            supabase.table("dsa_questions").insert({
+                                "quiz_name": parse_quiz,
+                                "prompt": pq["prompt"],
+                                "options": pq["options"],
+                                "correct_idx": pq["correct_idx"],
+                                "points": 10.0
+                            }).execute()
+                            added_count += 1
+                        except Exception as e:
+                            st.error(f"Supabase Insertion Error: {e}")
 
-                    try:
-                        supabase.table("dsa_questions").insert({
-                            "quiz_name": parse_quiz,
-                            "prompt": f"Derived from notes: {line[:90]}?",
-                            "options": fake_options,
-                            "correct_idx": correct_index,
-                            "points": 10.0
-                        }).execute()
-                        added_count += 1
-                    except Exception as e:
-                        st.error(f"Supabase Insertion Error: {e}")
-
-                if added_count > 0:
-                    st.success(f"Successfully parsed and added {added_count} questions into Supabase for `{parse_quiz}`!")
+                    if added_count > 0:
+                        st.success(f"Successfully parsed and inserted {added_count} real MCQs into Supabase for `{parse_quiz}`!")
