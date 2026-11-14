@@ -9,8 +9,14 @@ from supabase import create_client, Client
 # -------------------------------------------------------------------
 # SUPABASE CLIENT INITIALIZATION
 # -------------------------------------------------------------------
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "YOUR_SUPABASE_URL")
-SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "YOUR_SUPABASE_KEY")
+from supabase import create_client, Client
+
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "")
+
+if not SUPABASE_URL or SUPABASE_URL == "YOUR_SUPABASE_URL":
+    st.error("⚠️ SUPABASE_URL is missing! Please configure it in your Streamlit Cloud Secrets settings.")
+    st.stop()
 
 @st.cache_resource
 def init_supabase() -> Client:
