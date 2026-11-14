@@ -341,7 +341,47 @@ elif nav == "Global Leaderboard":
 # -------------------------------------------------------------------
 # VIEW 3: INSTRUCTOR DASHBOARD
 # -------------------------------------------------------------------
-with tab2:
+elif nav == "Instructor Dashboard":
+    st.subheader("⚙️ Faculty Dashboard & Question Bank")
+    st.caption("Manage question pools manually or parse lecture documents to automatically append questions.")
+
+    tab1, tab2 = st.tabs(["✍️ Manual Question Entry", "📁 Bulk Import from PDF / DOCX"])
+
+    with tab1:
+        st.markdown("### Add Single Question")
+        with st.form("add_question_form"):
+            target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()), key="man_sub")
+            target_quiz = st.selectbox("Select Target Quiz", list(st.session_state.quiz_database[target_subject].keys()), key="man_quiz")
+            new_prompt = st.text_input("Enter Question Prompt")
+
+            c1, c2 = st.columns(2)
+            with c1:
+                opt_a = st.text_input("Option A")
+                opt_b = st.text_input("Option B")
+            with c2:
+                opt_c = st.text_input("Option C")
+                opt_d = st.text_input("Option D")
+
+            correct_choice = st.selectbox("Correct Choice", ["Option A (0)", "Option B (1)", "Option C (2)", "Option D (3)"])
+            pts = st.number_input("Points Value", min_value=1.0, value=10.0)
+
+            if st.form_submit_button("Add Question to Memory Pool"):
+                if not new_prompt or not opt_a or not opt_b:
+                    st.error("Please fill in the question prompt and options!")
+                else:
+                    c_idx = int(correct_choice.split("(")[1][0])
+                    new_id = len(st.session_state.quiz_database[target_subject][target_quiz]) + 8000
+
+                    st.session_state.quiz_database[target_subject][target_quiz].append({
+                        "id": new_id,
+                        "prompt": new_prompt,
+                        "options": [opt_a, opt_b, opt_c, opt_d],
+                        "correct_idx": c_idx,
+                        "points": pts
+                    })
+                    st.success(f"Success! Question added to `{target_subject} -> {target_quiz}`!")
+
+   with tab2:
         st.markdown("### 📄 Document-to-Quiz Parser (PDF / DOCX)")
         st.caption("Upload lecture slides or notes to extract text and automatically push questions to Supabase.")
         
@@ -401,5 +441,3 @@ with tab2:
 
                 if added_count > 0:
                     st.success(f"Successfully parsed and added {added_count} questions into Supabase for `{parse_quiz}`!")
-
-                st.success(f"Successfully added {added_count} parsed questions into `{parse_subject} -> {parse_quiz}`!")
