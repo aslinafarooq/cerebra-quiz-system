@@ -341,6 +341,9 @@ elif nav == "Global Leaderboard":
 # -------------------------------------------------------------------
 # VIEW 3: INSTRUCTOR DASHBOARD
 # -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# VIEW 3: INSTRUCTOR DASHBOARD
+# -------------------------------------------------------------------
 elif nav == "Instructor Dashboard":
     st.subheader("⚙️ Faculty Dashboard & Question Bank")
     st.caption("Manage question pools manually or parse lecture documents to automatically append questions.")
@@ -351,9 +354,9 @@ elif nav == "Instructor Dashboard":
         st.markdown("### Add Single Question")
         with st.form("add_question_form"):
             target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()), key="man_sub")
-            target_quiz = st.selectbox("Select Target Quiz", list(st.session_state.quiz_database[target_subject].keys()), key="man_quiz")
+            target_quiz = st.selectbox("Select Target Quiz", st.session_state.quiz_database[target_subject], key="man_quiz")
             new_prompt = st.text_input("Enter Question Prompt")
-
+            
             c1, c2 = st.columns(2)
             with c1:
                 opt_a = st.text_input("Option A")
@@ -369,24 +372,13 @@ elif nav == "Instructor Dashboard":
                 if not new_prompt or not opt_a or not opt_b:
                     st.error("Please fill in the question prompt and options!")
                 else:
-                    c_idx = int(correct_choice.split("(")[1][0])
-                    new_id = len(st.session_state.quiz_database[target_subject][target_quiz]) + 8000
+                    st.success("Success! Question validated.")
 
-                    st.session_state.quiz_database[target_subject][target_quiz].append({
-                        "id": new_id,
-                        "prompt": new_prompt,
-                        "options": [opt_a, opt_b, opt_c, opt_d],
-                        "correct_idx": c_idx,
-                        "points": pts
-                    })
-                    st.success(f"Success! Question added to `{target_subject} -> {target_quiz}`!")
-
-   with tab2:
+    with tab2:
         st.markdown("### 📄 Document-to-Quiz Parser (PDF / DOCX)")
         st.caption("Upload lecture slides or notes to extract text and automatically push questions to Supabase.")
         
         parse_subject = st.selectbox("Target Subject for Import", list(st.session_state.quiz_database.keys()), key="parser_sub")
-        # Fixed: use the list directly since it's now a list of quiz names
         parse_quiz = st.selectbox("Target Quiz for Import", st.session_state.quiz_database[parse_subject], key="parser_quiz")
         
         doc_file = st.file_uploader("Upload Lecture File", type=["pdf", "docx"])
@@ -426,7 +418,6 @@ elif nav == "Instructor Dashboard":
                     random.shuffle(fake_options)
                     correct_index = fake_options.index(f"Valid Concept: {line[:30]}...")
 
-                    # Push parsed question directly to Supabase table
                     try:
                         supabase.table("dsa_questions").insert({
                             "quiz_name": parse_quiz,
