@@ -96,7 +96,6 @@ class MockCppEngine:
                 q_data = shuffled_mapping[qid]
                 pts = q_data["points"]
                 total += pts
-                # Compare student's selected index against the shuffled correct index
                 if user_choice_idx == q_data["new_correct_idx"]:
                     score += pts
 
@@ -120,25 +119,64 @@ def load_cpp():
 cpp_engine = load_cpp()
 
 # -------------------------------------------------------------------
-# 3. QUIZ DATABASE & NESTED QUIZZES (Quiz 1-10 with 10 Questions Each)
+# 3. REALISTIC QUESTION BANK (Quiz 1-10 per Subject)
 # -------------------------------------------------------------------
 if "quiz_database" not in st.session_state:
-    subjects = ["Data Structures & Algorithms", "Computer Networks", "Digital Health & AI"]
+    subjects_data = {
+        "Data Structures & Algorithms": [
+            ("What is the worst-case time complexity of QuickSort?", ["O(n log n)", "O(n^2)", "O(n)", "O(log n)"], 1),
+            ("Which data structure uses LIFO (Last In, First Out) ordering?", ["Stack", "Queue", "Array", "Linked List"], 0),
+            ("What is the time complexity of searching in a balanced Binary Search Tree (BST)?", ["O(log n)", "O(n)", "O(n log n)", "O(1)"], 0),
+            ("Which traversal algorithm uses a Queue data structure?", ["Breadth-First Search (BFS)", "Depth-First Search (DFS)", "In-order traversal", "Post-order traversal"], 0),
+            ("What is the auxiliary space complexity of Merge Sort?", ["O(n)", "O(log n)", "O(1)", "O(n^2)"], 0),
+            ("Which hashing collision resolution method uses linked lists at index buckets?", ["Separate Chaining", "Linear Probing", "Quadratic Probing", "Double Hashing"], 0),
+            ("What is the time complexity of accessing an element by index in a dynamic array?", ["O(1)", "O(n)", "O(log n)", "O(n log n)"], 0),
+            ("In a Min-Heap, where is the smallest element always located?", ["At the root", "At the rightmost leaf", "At a random position", "At the deepest level"], 0),
+            ("Which graph algorithm finds the shortest path from a single source with non-negative edge weights?", ["Dijkstra's Algorithm", "Bellman-Ford Algorithm", "Kruskal's Algorithm", "Prim's Algorithm"], 0),
+            ("What data structure is fundamentally used to implement function call stacks and recursion?", ["Stack", "Queue", "Heap", "Graph"], 0)
+        ],
+        "Computer Networks": [
+            ("Which OSI layer is responsible for reliable end-to-end message delivery and flow control?", ["Transport Layer", "Network Layer", "Data Link Layer", "Application Layer"], 0),
+            ("What protocol is used for secure encrypted communication over the web on Port 443?", ["HTTPS / TLS", "HTTP", "FTP", "Telnet"], 0),
+            ("Which device operates primarily at Layer 3 (Network Layer) to forward packets across different subnets?", ["Router", "Hub", "Layer 2 Switch", "Repeater"], 0),
+            ("What is the primary function of DNS (Domain Name System)?", ["Translating domain names to IP addresses", "Assigning MAC addresses", "Encrypting TCP packets", "Routing BGP traffic"], 0),
+            ("Which 5G/6G architecture feature enables partitioning a physical network into multiple virtual networks?", ["Network Slicing", "Packet Filtering", "Carrier Aggregation", "Beamforming"], 0),
+            ("What is the default port number for SSH (Secure Shell)?", ["Port 22", "Port 80", "Port 21", "Port 443"], 0),
+            ("Which address uniquely identifies a network interface card (NIC) at the Data Link Layer?", ["MAC Address", "IP Address", "Port Number", "Session ID"], 0),
+            ("What mechanism does TCP use to ensure reliable delivery and prevent network congestion?", ["Three-way handshake & sliding window", "Broadcast storms", "Random packet drop", "Stateless datagram transmission"], 0),
+            ("Which routing protocol is an exterior gateway protocol used to route traffic between autonomous systems on the internet?", ["BGP (Border Gateway Protocol)", "OSPF", "RIP", "EIGRP"], 0),
+            ("What is the purpose of a subnet mask in IPv4 addressing?", ["To divide an IP address into network and host portions", "To encrypt packet headers", "To assign dynamic IP leases", "To resolve MAC collisions"], 0)
+        ],
+        "Digital Health & AI": [
+            ("What does RAG stand for in modern generative AI and LLM architectures?", ["Retrieval-Augmented Generation", "Random Access Gateway", "Recursive Algorithm Group", "Realtime Analytics Graph"], 0),
+            ("Which database management system is standard for relational SQL data storage with Supabase?", ["PostgreSQL", "MongoDB", "Redis", "Cassandra"], 0),
+            ("What is a primary ethical concern when deploying AI models in clinical healthcare settings?", ["Algorithmic bias and patient data privacy", "High font rendering speed", "CSS stylesheet compatibility", "Static code compilation times"], 0),
+            ("Which neural network component underpins modern Large Language Models like GPT?", ["Transformer Self-Attention Mechanism", "Convolutional Filter Bank", "Recurrent Feedback Loop", "Markov Decision Matrix"], 0),
+            ("What is the purpose of Electronic Health Record (EHR) interoperability standards like HL7/FHIR?", ["To enable secure exchange of health data across disparate systems", "To compile C++ shared libraries", "To compress medical imaging files", "To design Streamlit user interfaces"], 0),
+            ("In medical AI diagnostics, what does 'explainability' (XAI) refer to?", ["The ability of the model to output understandable rationales for its predictions", "The speed at which inference runs on a GPU", "The total number of parameters in the model", "The cost of cloud hosting APIs"], 0),
+            ("Which Python framework is widely used for rapid interactive data science and web app deployment?", ["Streamlit", "Django REST Framework", "Spring Boot", "Laravel"], 0),
+            ("What is the role of data anonymization in health informatics?", ["Protecting patient identity by removing Personally Identifiable Information (PII)", "Accelerating database query execution", "Increasing model training loss", "Formatting PDF documents"], 0),
+            ("Which machine learning paradigm trains models on decentralized medical data without sharing raw patient records?", ["Federated Learning", "Supervised Fine-Tuning", "Reinforcement Learning from Human Feedback", "Unsupervised Clustering"], 0),
+            ("What type of machine learning model is commonly used to predict patient readmission risk based on tabular clinical records?", ["Gradient Boosting / Random Forest", "Generative Adversarial Network", "StyleTransfer CNN", "Word2Vec Embedding"], 0)
+        ]
+    }
+    
     default_db = {}
-    for sub in subjects:
+    for sub, q_list in subjects_data.items():
         default_db[sub] = {}
         for q_num in range(1, 11):
             quiz_key = f"Quiz {q_num}"
-            default_db[sub][quiz_key] = [
-                {
+            quiz_questions = []
+            for j, (prompt, opts, c_idx) in enumerate(q_list, start=1):
+                quiz_questions.append({
                     "id": q_num * 100 + j,
-                    "prompt": f"[{sub} - Quiz {q_num}] Question {j}: Core technical evaluation concept?",
-                    "options": [f"Correct Option for Q{j}", "Distractor A", "Distractor B", "Distractor C"],
-                    "correct_idx": 0,
+                    "prompt": f"{prompt}",
+                    "options": opts,
+                    "correct_idx": c_idx,
                     "points": 10.0
-                }
-                for j in range(1, 11)
-            ]
+                })
+            default_db[sub][quiz_key] = quiz_questions
+            
     st.session_state.quiz_database = default_db
 
 if "leaderboard" not in st.session_state:
@@ -171,9 +209,9 @@ if nav == "Student Portal":
 
     c1, c2 = st.columns(2)
     with c1:
-        student_name = st.text_input("Student Full Name", placeholder="e.g., Ali")
+        student_name = st.text_input("Student Full Name", placeholder="e.g., Ayesha Shahbaz")
     with c2:
-        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., F25-12345")
+        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., CS-2026-88")
 
     selected_subject = st.selectbox(
         "📚 Select Subject", 
@@ -193,18 +231,15 @@ if nav == "Student Portal":
         
         session_key = f"shuffled_session_{selected_subject}_{selected_quiz_num}_{student_name}"
         
-        # Generate randomized session permutation (shuffling questions and answer options)
         if session_key not in st.session_state:
             raw_questions = st.session_state.quiz_database[selected_subject][selected_quiz_num]
-            # Shuffle question order (Array/Linked List randomization feature)
             shuffled_questions = list(raw_questions)
             random.shuffle(shuffled_questions)
             
             shuffled_mapping = {}
             for q in shuffled_questions:
-                # Pair options with their original correctness flag
                 paired_opts = [(opt, idx == q["correct_idx"]) for idx, opt in enumerate(q["options"])]
-                random.shuffle(paired_opts) # Shuffle answer options randomly
+                random.shuffle(paired_opts)
                 
                 new_opts = [item[0] for item in paired_opts]
                 new_correct_idx = next(i for i, item in enumerate(paired_opts) if item[1])
