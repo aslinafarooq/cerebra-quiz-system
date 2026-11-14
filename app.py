@@ -1,6 +1,7 @@
 import os
 import sys
 import ctypes
+import random
 import subprocess
 import streamlit as st
 
@@ -66,14 +67,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------------------------
-# 2. CROSS-PLATFORM C++ ENGINE LOADER WITH PYTHON FALLBACK
+# 2. CROSS-PLATFORM C++ ENGINE LOADER WITH SMART PYTHON FALLBACK
 # -------------------------------------------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 cpp_source = os.path.join(BASE_DIR, "quiz_system.cpp")
-
 lib_path = os.path.join(BASE_DIR, "libquiz_engine.dll" if sys.platform == "win32" else "libquiz_engine.so")
 
-# Try compiling if missing
 if not os.path.exists(lib_path) and os.path.exists(cpp_source):
     try:
         if sys.platform == "win32":
@@ -84,34 +83,22 @@ if not os.path.exists(lib_path) and os.path.exists(cpp_source):
         pass
 
 class MockCppEngine:
-    """Smart Python fallback engine that actually grades quiz attempts."""
-    def process_attempt(self, q_ids, opts, count, score_out, total_out):
+    """Smart Python fallback engine that grades based on randomized option indices."""
+    def process_attempt(self, q_ids, opts, count, score_out, total_out, shuffled_mapping):
         total = 0.0
         score = 0.0
         
-        # Pull quiz database from Streamlit session state to check correct answers
-        quiz_db = st.session_state.get("quiz_database", {})
-        q_map = {}
-        for sub, q_list in quiz_db.items():
-            for q in q_list:
-                q_map[q["id"]] = {
-                    "correct_idx": q["correct_idx"], 
-                    "points": q.get("points", 10.0)
-                }
-        
-        # Evaluate each submitted question
         for i in range(count):
             qid = int(q_ids[i])
-            user_choice = int(opts[i])
+            user_choice_idx = int(opts[i])
             
-            if qid in q_map:
-                pts = q_map[qid]["points"]
+            if qid in shuffled_mapping:
+                q_data = shuffled_mapping[qid]
+                pts = q_data["points"]
                 total += pts
-                if user_choice == q_map[qid]["correct_idx"]:
+                # Compare student's selected index against the shuffled correct index
+                if user_choice_idx == q_data["new_correct_idx"]:
                     score += pts
-            else:
-                total += 10.0
-                score += 10.0  # Safe default if question ID is custom/unmapped
 
         score_out.value = float(score)
         total_out.value = float(total)
@@ -128,35 +115,33 @@ def load_cpp():
             return ctypes.CDLL(lib_path)
         except Exception:
             pass
-    
-    # Fallback to pure Python engine so the cloud app never crashes
-    st.toast("⚠️ Running on Cerebra Python Fallback Engine", icon="⚡")
     return MockCppEngine()
 
 cpp_engine = load_cpp()
 
 # -------------------------------------------------------------------
-# 3. QUIZ DATABASE & SESSION INITIALIZATION
+# 3. QUIZ DATABASE & NESTED QUIZZES (Quiz 1-10 with 10 Questions Each)
 # -------------------------------------------------------------------
-DEFAULT_QUIZZES = {
-    "Data Structures & Algorithms": [
-        {"id": 1, "prompt": "What is the Big O time complexity of Binary Search?", "options": ["O(n)", "O(log n)", "O(n^2)", "O(1)"], "correct_idx": 1, "points": 10.0},
-        {"id": 2, "prompt": "Which data structure operates on LIFO (Last-In, First-Out)?", "options": ["Queue", "Array", "Stack", "Linked List"], "correct_idx": 2, "points": 10.0},
-        {"id": 3, "prompt": "Which data structure manages student submissions in FIFO order?", "options": ["Stack", "Queue", "Tree", "Graph"], "correct_idx": 1, "points": 10.0}
-    ],
-    "Computer Networks": [
-        {"id": 101, "prompt": "Which OSI layer does IP Routing operate on?", "options": ["Data Link Layer", "Network Layer", "Transport Layer", "Application Layer"], "correct_idx": 1, "points": 10.0},
-        {"id": 102, "prompt": "What is the default TCP port number for HTTP traffic?", "options": ["Port 21", "Port 22", "Port 80", "Port 443"], "correct_idx": 2, "points": 10.0},
-        {"id": 103, "prompt": "Which technique enables network isolation into virtual slices in 5G/6G architecture?", "options": ["Network Slicing", "Packet Switching", "Frequency Hopping", "Modulation"], "correct_idx": 0, "points": 10.0}
-    ],
-    "Digital Health & AI": [
-        {"id": 201, "prompt": "What does RAG stand for in modern generative AI systems?", "options": ["Random Access Generation", "Retrieval-Augmented Generation", "Recursive Algorithm Group", "Realtime AI Gateway"], "correct_idx": 1, "points": 10.0},
-        {"id": 202, "prompt": "Which relational database architecture is best suited for structured SQL tables with Supabase?", "options": ["PostgreSQL", "MongoDB", "Flat CSV Files", "Local Cache"], "correct_idx": 0, "points": 10.0}
-    ]
-}
+if "quiz_database" not in st.session_state:
+    subjects = ["Data Structures & Algorithms", "Computer Networks", "Digital Health & AI"]
+    default_db = {}
+    for sub in subjects:
+        default_db[sub] = {}
+        for q_num in range(1, 11):
+            quiz_key = f"Quiz {q_num}"
+            default_db[sub][quiz_key] = [
+                {
+                    "id": q_num * 100 + j,
+                    "prompt": f"[{sub} - Quiz {q_num}] Question {j}: Core technical evaluation concept?",
+                    "options": [f"Correct Option for Q{j}", "Distractor A", "Distractor B", "Distractor C"],
+                    "correct_idx": 0,
+                    "points": 10.0
+                }
+                for j in range(1, 11)
+            ]
+    st.session_state.quiz_database = default_db
 
-if "quiz_database" not in st.session_state or "leaderboard" not in st.session_state:
-    st.session_state.quiz_database = DEFAULT_QUIZZES
+if "leaderboard" not in st.session_state:
     st.session_state.leaderboard = []
 
 # -------------------------------------------------------------------
@@ -165,7 +150,7 @@ if "quiz_database" not in st.session_state or "leaderboard" not in st.session_st
 st.markdown("""
     <div class="app-header">
         <h1>🎓 Cerebra Assessment Platform</h1>
-        <p>Powered by native C++ Dynamic Data Structures (Linked Lists, Stacks, Queues) & Streamlit</p>
+        <p>Powered by Randomized Shuffling Algorithms & Streamlit Cloud</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -174,12 +159,12 @@ nav = st.sidebar.radio("Select View:", ["Student Portal", "Global Leaderboard", 
 
 st.sidebar.divider()
 if st.sidebar.button("🔄 Reset Quiz Data & Reload"):
-    st.session_state.quiz_database = DEFAULT_QUIZZES
-    st.session_state.leaderboard = []
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.rerun()
 
 # -------------------------------------------------------------------
-# VIEW 1: STUDENT PORTAL
+# VIEW 1: STUDENT PORTAL (Shuffled Questions & Answer Options)
 # -------------------------------------------------------------------
 if nav == "Student Portal":
     st.subheader("📝 Take an Assessment")
@@ -190,37 +175,77 @@ if nav == "Student Portal":
     with c2:
         roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., CS-2026-88")
 
-    selected_quiz_topic = st.selectbox(
-        "📚 Select Subject Quiz", 
+    selected_subject = st.selectbox(
+        "📚 Select Subject", 
         options=list(st.session_state.quiz_database.keys())
+    )
+
+    available_quizzes = list(st.session_state.quiz_database[selected_subject].keys())
+    selected_quiz_num = st.selectbox(
+        "📋 Select Assessment Quiz", 
+        options=available_quizzes
     )
 
     if not student_name or not roll_no:
         st.info("💡 Enter your Student Name and Roll Number above to start the quiz.")
     else:
         st.divider()
-        active_questions = st.session_state.quiz_database[selected_quiz_topic]
+        
+        session_key = f"shuffled_session_{selected_subject}_{selected_quiz_num}_{student_name}"
+        
+        # Generate randomized session permutation (shuffling questions and answer options)
+        if session_key not in st.session_state:
+            raw_questions = st.session_state.quiz_database[selected_subject][selected_quiz_num]
+            # Shuffle question order (Array/Linked List randomization feature)
+            shuffled_questions = list(raw_questions)
+            random.shuffle(shuffled_questions)
+            
+            shuffled_mapping = {}
+            for q in shuffled_questions:
+                # Pair options with their original correctness flag
+                paired_opts = [(opt, idx == q["correct_idx"]) for idx, opt in enumerate(q["options"])]
+                random.shuffle(paired_opts) # Shuffle answer options randomly
+                
+                new_opts = [item[0] for item in paired_opts]
+                new_correct_idx = next(i for i, item in enumerate(paired_opts) if item[1])
+                
+                shuffled_mapping[q["id"]] = {
+                    "prompt": q["prompt"],
+                    "points": q["points"],
+                    "shuffled_options": new_opts,
+                    "new_correct_idx": new_correct_idx
+                }
+            
+            st.session_state[session_key] = {
+                "questions": shuffled_questions,
+                "mapping": shuffled_mapping
+            }
+
+        quiz_session = st.session_state[session_key]
+        active_questions = quiz_session["questions"]
+        shuffled_mapping = quiz_session["mapping"]
 
         with st.form("quiz_attempt_form", clear_on_submit=False):
-            st.markdown(f"### Current Exam: `{selected_quiz_topic}`")
+            st.markdown(f"### Current Exam: `{selected_subject} — {selected_quiz_num}` (Randomized Shuffle Active 🔀)")
             st.caption(f"Total Questions: {len(active_questions)}")
             st.write("")
 
             selected_options = {}
             for q in active_questions:
-                st.markdown(f"**Q{q['id']}: {q['prompt']}** `({q['points']} pts)`")
+                q_data = shuffled_mapping[q["id"]]
+                st.markdown(f"**Q{q['id']}: {q_data['prompt']}** `({q_data['points']} pts)`")
+                
                 selected = st.radio(
                     f"Select option for Q{q['id']}:", 
-                    q["options"], 
-                    key=f"q_choice_{q['id']}"
+                    q_data["shuffled_options"], 
+                    key=f"q_choice_{session_key}_{q['id']}"
                 )
-                selected_options[q['id']] = q["options"].index(selected)
+                selected_options[q['id']] = q_data["shuffled_options"].index(selected)
                 st.write("---")
 
             submit = st.form_submit_button("Submit Assessment")
 
         if submit:
-            # Prepare arrays for C++ DLL execution
             q_ids_list = list(selected_options.keys())
             opts_list = list(selected_options.values())
 
@@ -230,42 +255,25 @@ if nav == "Student Portal":
             score_out = ctypes.c_double(0.0)
             total_out = ctypes.c_double(0.0)
 
-            # Call C++ DLL backend or Python fallback safely
             if hasattr(cpp_engine, "process_attempt"):
                 if isinstance(cpp_engine, MockCppEngine):
-                    # Python fallback takes the c_double objects directly
-                    cpp_engine.process_attempt(
-                        q_ids, 
-                        opts, 
-                        len(q_ids_list), 
-                        score_out, 
-                        total_out
-                    )
+                    cpp_engine.process_attempt(q_ids, opts, len(q_ids_list), score_out, total_out, shuffled_mapping)
                 else:
-                    # Real C DLL requires pointers via ctypes.byref()
-                    cpp_engine.process_attempt(
-                        q_ids, 
-                        opts, 
-                        len(q_ids_list), 
-                        ctypes.byref(score_out), 
-                        ctypes.byref(total_out)
-                    )
+                    cpp_engine.process_attempt(q_ids, opts, len(q_ids_list), ctypes.byref(score_out), ctypes.byref(total_out))
 
             score = score_out.value
             total = total_out.value
             percentage = (score / total) * 100 if total > 0 else 0
 
-            # Push attempt to session Leaderboard
             st.session_state.leaderboard.append({
                 "Student Name": student_name,
                 "Roll No": roll_no,
-                "Subject": selected_quiz_topic,
+                "Subject": f"{selected_subject} ({selected_quiz_num})",
                 "Score": f"{score:.0f}/{total:.0f}",
                 "Percentage": f"{percentage:.1f}%",
                 "RawScore": score
             })
 
-            # Display Results Cards
             st.markdown("---")
             st.markdown("### 📊 Official Assessment Results")
             r1, r2, r3 = st.columns(3)
@@ -288,7 +296,6 @@ elif nav == "Global Leaderboard":
         st.info("No quiz submissions recorded yet! Complete a quiz in the Student Portal to see your rank.")
     else:
         sorted_board = sorted(st.session_state.leaderboard, key=lambda x: x["RawScore"], reverse=True)
-        
         top_student = sorted_board[0]
         st.success(f"🥇 **Current Top Rank:** **{top_student['Student Name']}** ({top_student['Subject']}) — Score: **{top_student['Percentage']}**")
         
@@ -299,7 +306,7 @@ elif nav == "Global Leaderboard":
                 "Rank": badge,
                 "Student Name": item["Student Name"],
                 "Roll Number": item["Roll No"],
-                "Subject": item["Subject"],
+                "Subject / Quiz": item["Subject"],
                 "Score": item["Score"],
                 "Percentage": item["Percentage"]
             })
@@ -309,19 +316,17 @@ elif nav == "Global Leaderboard":
 # -------------------------------------------------------------------
 # VIEW 3: INSTRUCTOR DASHBOARD
 # -------------------------------------------------------------------
-# -------------------------------------------------------------------
-# VIEW 3: INSTRUCTOR DASHBOARD
-# -------------------------------------------------------------------
 elif nav == "Instructor Dashboard":
     st.subheader("⚙️ Faculty Dashboard & Question Bank")
-    st.caption("Manage your question bank manually or parse full lecture documents into quizzes.")
+    st.caption("Manage question pools manually or parse lecture documents to automatically append questions.")
 
     tab1, tab2 = st.tabs(["✍️ Manual Question Entry", "📁 Bulk Import from PDF / DOCX"])
 
     with tab1:
         st.markdown("### Add Single Question")
         with st.form("add_question_form"):
-            target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()))
+            target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()), key="man_sub")
+            target_quiz = st.selectbox("Select Target Quiz", list(st.session_state.quiz_database[target_subject].keys()), key="man_quiz")
             new_prompt = st.text_input("Enter Question Prompt")
             
             c1, c2 = st.columns(2)
@@ -340,28 +345,27 @@ elif nav == "Instructor Dashboard":
                     st.error("Please fill in the question prompt and options!")
                 else:
                     c_idx = int(correct_choice.split("(")[1][0])
-                    new_id = len(st.session_state.quiz_database[target_subject]) + 500
+                    new_id = len(st.session_state.quiz_database[target_subject][target_quiz]) + 8000
 
-                    st.session_state.quiz_database[target_subject].append({
+                    st.session_state.quiz_database[target_subject][target_quiz].append({
                         "id": new_id,
                         "prompt": new_prompt,
                         "options": [opt_a, opt_b, opt_c, opt_d],
                         "correct_idx": c_idx,
                         "points": pts
                     })
-                    st.success(f"Success! Question added to `{target_subject}`!")
+                    st.success(f"Success! Question added to `{target_subject} -> {target_quiz}`!")
 
     with tab2:
         st.markdown("### 📄 Document-to-Quiz Parser (PDF / DOCX)")
-        st.caption("Upload lecture slides or notes to preview extracted text and bulk-import questions.")
+        st.caption("Upload lecture slides or notes to extract text and automatically add questions to your selected quiz bank.")
+        
+        parse_subject = st.selectbox("Target Subject for Import", list(st.session_state.quiz_database.keys()), key="parser_sub")
+        parse_quiz = st.selectbox("Target Quiz for Import", list(st.session_state.quiz_database[parse_subject].keys()), key="parser_quiz")
         
         doc_file = st.file_uploader("Upload Lecture File", type=["pdf", "docx"])
         
         if doc_file is not None:
-            file_details = {"Filename": doc_file.name, "FileType": doc_file.type, "Size": doc_file.size}
-            st.json(file_details)
-            
-            # Simple text extraction preview
             extracted_text = ""
             if doc_file.type == "application/pdf":
                 try:
@@ -382,5 +386,28 @@ elif nav == "Instructor Dashboard":
 
             st.text_area("🔍 Extracted Document Preview", extracted_text[:2000], height=250)
             
-            if st.button("🚀 Process & Generate Quiz from Document"):
-                st.success("Document parsed successfully! Questions ready for review.")
+            if st.button("🚀 Process Document & Add Extracted Questions"):
+                valid_lines = [line.strip() for line in extracted_text.split('\n') if len(line.strip()) > 15]
+                added_count = 0
+                
+                for idx, line in enumerate(valid_lines[:15]):
+                    fake_options = [
+                        f"Valid Concept: {line[:30]}...",
+                        "Incorrect Alternate A",
+                        "Incorrect Alternate B",
+                        "None of the above"
+                    ]
+                    random.shuffle(fake_options)
+                    correct_index = fake_options.index(f"Valid Concept: {line[:30]}...")
+
+                    parsed_question = {
+                        "id": 9000 + idx,
+                        "prompt": f"Derived from notes: {line[:90]}?",
+                        "options": fake_options,
+                        "correct_idx": correct_index,
+                        "points": 10.0
+                    }
+                    st.session_state.quiz_database[parse_subject][parse_quiz].append(parsed_question)
+                    added_count += 1
+
+                st.success(f"Successfully added {added_count} parsed questions into `{parse_subject} -> {parse_quiz}`!")
