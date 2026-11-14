@@ -341,52 +341,13 @@ elif nav == "Global Leaderboard":
 # -------------------------------------------------------------------
 # VIEW 3: INSTRUCTOR DASHBOARD
 # -------------------------------------------------------------------
-elif nav == "Instructor Dashboard":
-    st.subheader("⚙️ Faculty Dashboard & Question Bank")
-    st.caption("Manage question pools manually or parse lecture documents to automatically append questions.")
-
-    tab1, tab2 = st.tabs(["✍️ Manual Question Entry", "📁 Bulk Import from PDF / DOCX"])
-
-    with tab1:
-        st.markdown("### Add Single Question")
-        with st.form("add_question_form"):
-            target_subject = st.selectbox("Select Target Subject", list(st.session_state.quiz_database.keys()), key="man_sub")
-            target_quiz = st.selectbox("Select Target Quiz", list(st.session_state.quiz_database[target_subject].keys()), key="man_quiz")
-            new_prompt = st.text_input("Enter Question Prompt")
-            
-            c1, c2 = st.columns(2)
-            with c1:
-                opt_a = st.text_input("Option A")
-                opt_b = st.text_input("Option B")
-            with c2:
-                opt_c = st.text_input("Option C")
-                opt_d = st.text_input("Option D")
-
-            correct_choice = st.selectbox("Correct Choice", ["Option A (0)", "Option B (1)", "Option C (2)", "Option D (3)"])
-            pts = st.number_input("Points Value", min_value=1.0, value=10.0)
-
-            if st.form_submit_button("Add Question to Memory Pool"):
-                if not new_prompt or not opt_a or not opt_b:
-                    st.error("Please fill in the question prompt and options!")
-                else:
-                    c_idx = int(correct_choice.split("(")[1][0])
-                    new_id = len(st.session_state.quiz_database[target_subject][target_quiz]) + 8000
-
-                    st.session_state.quiz_database[target_subject][target_quiz].append({
-                        "id": new_id,
-                        "prompt": new_prompt,
-                        "options": [opt_a, opt_b, opt_c, opt_d],
-                        "correct_idx": c_idx,
-                        "points": pts
-                    })
-                    st.success(f"Success! Question added to `{target_subject} -> {target_quiz}`!")
-
-    with tab2:
+with tab2:
         st.markdown("### 📄 Document-to-Quiz Parser (PDF / DOCX)")
-        st.caption("Upload lecture slides or notes to extract text and automatically add questions to your selected quiz bank.")
+        st.caption("Upload lecture slides or notes to extract text and automatically push questions to Supabase.")
         
         parse_subject = st.selectbox("Target Subject for Import", list(st.session_state.quiz_database.keys()), key="parser_sub")
-        parse_quiz = st.selectbox("Target Quiz for Import", list(st.session_state.quiz_database[parse_subject].keys()), key="parser_quiz")
+        # Fixed: use the list directly since it's now a list of quiz names
+        parse_quiz = st.selectbox("Target Quiz for Import", st.session_state.quiz_database[parse_subject], key="parser_quiz")
         
         doc_file = st.file_uploader("Upload Lecture File", type=["pdf", "docx"])
         
@@ -411,11 +372,11 @@ elif nav == "Instructor Dashboard":
 
             st.text_area("🔍 Extracted Document Preview", extracted_text[:2000], height=250)
             
-            if st.button("🚀 Process Document & Add Extracted Questions"):
+            if st.button("🚀 Process Document & Insert into Supabase"):
                 valid_lines = [line.strip() for line in extracted_text.split('\n') if len(line.strip()) > 15]
                 added_count = 0
                 
-                for idx, line in enumerate(valid_lines[:15]):
+                for line in valid_lines[:15]:
                     fake_options = [
                         f"Valid Concept: {line[:30]}...",
                         "Incorrect Alternate A",
@@ -425,14 +386,20 @@ elif nav == "Instructor Dashboard":
                     random.shuffle(fake_options)
                     correct_index = fake_options.index(f"Valid Concept: {line[:30]}...")
 
-                    parsed_question = {
-                        "id": 9000 + idx,
-                        "prompt": f"Derived from notes: {line[:90]}?",
-                        "options": fake_options,
-                        "correct_idx": correct_index,
-                        "points": 10.0
-                    }
-                    st.session_state.quiz_database[parse_subject][parse_quiz].append(parsed_question)
-                    added_count += 1
+                    # Push parsed question directly to Supabase table
+                    try:
+                        supabase.table("dsa_questions").insert({
+                            "quiz_name": parse_quiz,
+                            "prompt": f"Derived from notes: {line[:90]}?",
+                            "options": fake_options,
+                            "correct_idx": correct_index,
+                            "points": 10.0
+                        }).execute()
+                        added_count += 1
+                    except Exception as e:
+                        st.error(f"Supabase Insertion Error: {e}")
+
+                if added_count > 0:
+                    st.success(f"Successfully parsed and added {added_count} questions into Supabase for `{parse_quiz}`!")
 
                 st.success(f"Successfully added {added_count} parsed questions into `{parse_subject} -> {parse_quiz}`!")
