@@ -4,6 +4,31 @@ import ctypes
 import random
 import subprocess
 import streamlit as st
+from supabase import create_client, Client
+
+# -------------------------------------------------------------------
+# SUPABASE CLIENT INITIALIZATION
+# -------------------------------------------------------------------
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "YOUR_SUPABASE_URL")
+SUPABASE_KEY = st.secrets.get("SUPABASE_KEY", "YOUR_SUPABASE_KEY")
+
+@st.cache_resource
+def init_supabase() -> Client:
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+supabase = init_supabase()
+
+# Helper function to fetch DSA questions dynamically from Supabase
+def fetch_dsa_quiz_from_supabase(quiz_name):
+    try:
+        response = supabase.table("dsa_questions") \
+            .select("*") \
+            .eq("quiz_name", quiz_name) \
+            .execute()
+        return response.data
+    except Exception as e:
+        st.error(f"Error fetching from Supabase: {e}")
+        return []
 
 # -------------------------------------------------------------------
 # 1. PAGE SETUP & INDIGO / VIOLET BRANDING
@@ -121,63 +146,15 @@ cpp_engine = load_cpp()
 # -------------------------------------------------------------------
 # 3. REALISTIC QUESTION BANK (Quiz 1-10 per Subject)
 # -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# QUIZ DATABASE INITIALIZATION
+# -------------------------------------------------------------------
 if "quiz_database" not in st.session_state:
-    subjects_data = {
-        "Data Structures & Algorithms": [
-            ("What is the worst-case time complexity of QuickSort?", ["O(n log n)", "O(n^2)", "O(n)", "O(log n)"], 1),
-            ("Which data structure uses LIFO (Last In, First Out) ordering?", ["Stack", "Queue", "Array", "Linked List"], 0),
-            ("What is the time complexity of searching in a balanced Binary Search Tree (BST)?", ["O(log n)", "O(n)", "O(n log n)", "O(1)"], 0),
-            ("Which traversal algorithm uses a Queue data structure?", ["Breadth-First Search (BFS)", "Depth-First Search (DFS)", "In-order traversal", "Post-order traversal"], 0),
-            ("What is the auxiliary space complexity of Merge Sort?", ["O(n)", "O(log n)", "O(1)", "O(n^2)"], 0),
-            ("Which hashing collision resolution method uses linked lists at index buckets?", ["Separate Chaining", "Linear Probing", "Quadratic Probing", "Double Hashing"], 0),
-            ("What is the time complexity of accessing an element by index in a dynamic array?", ["O(1)", "O(n)", "O(log n)", "O(n log n)"], 0),
-            ("In a Min-Heap, where is the smallest element always located?", ["At the root", "At the rightmost leaf", "At a random position", "At the deepest level"], 0),
-            ("Which graph algorithm finds the shortest path from a single source with non-negative edge weights?", ["Dijkstra's Algorithm", "Bellman-Ford Algorithm", "Kruskal's Algorithm", "Prim's Algorithm"], 0),
-            ("What data structure is fundamentally used to implement function call stacks and recursion?", ["Stack", "Queue", "Heap", "Graph"], 0)
-        ],
-        "Computer Networks": [
-            ("Which OSI layer is responsible for reliable end-to-end message delivery and flow control?", ["Transport Layer", "Network Layer", "Data Link Layer", "Application Layer"], 0),
-            ("What protocol is used for secure encrypted communication over the web on Port 443?", ["HTTPS / TLS", "HTTP", "FTP", "Telnet"], 0),
-            ("Which device operates primarily at Layer 3 (Network Layer) to forward packets across different subnets?", ["Router", "Hub", "Layer 2 Switch", "Repeater"], 0),
-            ("What is the primary function of DNS (Domain Name System)?", ["Translating domain names to IP addresses", "Assigning MAC addresses", "Encrypting TCP packets", "Routing BGP traffic"], 0),
-            ("Which 5G/6G architecture feature enables partitioning a physical network into multiple virtual networks?", ["Network Slicing", "Packet Filtering", "Carrier Aggregation", "Beamforming"], 0),
-            ("What is the default port number for SSH (Secure Shell)?", ["Port 22", "Port 80", "Port 21", "Port 443"], 0),
-            ("Which address uniquely identifies a network interface card (NIC) at the Data Link Layer?", ["MAC Address", "IP Address", "Port Number", "Session ID"], 0),
-            ("What mechanism does TCP use to ensure reliable delivery and prevent network congestion?", ["Three-way handshake & sliding window", "Broadcast storms", "Random packet drop", "Stateless datagram transmission"], 0),
-            ("Which routing protocol is an exterior gateway protocol used to route traffic between autonomous systems on the internet?", ["BGP (Border Gateway Protocol)", "OSPF", "RIP", "EIGRP"], 0),
-            ("What is the purpose of a subnet mask in IPv4 addressing?", ["To divide an IP address into network and host portions", "To encrypt packet headers", "To assign dynamic IP leases", "To resolve MAC collisions"], 0)
-        ],
-        "Digital Health & AI": [
-            ("What does RAG stand for in modern generative AI and LLM architectures?", ["Retrieval-Augmented Generation", "Random Access Gateway", "Recursive Algorithm Group", "Realtime Analytics Graph"], 0),
-            ("Which database management system is standard for relational SQL data storage with Supabase?", ["PostgreSQL", "MongoDB", "Redis", "Cassandra"], 0),
-            ("What is a primary ethical concern when deploying AI models in clinical healthcare settings?", ["Algorithmic bias and patient data privacy", "High font rendering speed", "CSS stylesheet compatibility", "Static code compilation times"], 0),
-            ("Which neural network component underpins modern Large Language Models like GPT?", ["Transformer Self-Attention Mechanism", "Convolutional Filter Bank", "Recurrent Feedback Loop", "Markov Decision Matrix"], 0),
-            ("What is the purpose of Electronic Health Record (EHR) interoperability standards like HL7/FHIR?", ["To enable secure exchange of health data across disparate systems", "To compile C++ shared libraries", "To compress medical imaging files", "To design Streamlit user interfaces"], 0),
-            ("In medical AI diagnostics, what does 'explainability' (XAI) refer to?", ["The ability of the model to output understandable rationales for its predictions", "The speed at which inference runs on a GPU", "The total number of parameters in the model", "The cost of cloud hosting APIs"], 0),
-            ("Which Python framework is widely used for rapid interactive data science and web app deployment?", ["Streamlit", "Django REST Framework", "Spring Boot", "Laravel"], 0),
-            ("What is the role of data anonymization in health informatics?", ["Protecting patient identity by removing Personally Identifiable Information (PII)", "Accelerating database query execution", "Increasing model training loss", "Formatting PDF documents"], 0),
-            ("Which machine learning paradigm trains models on decentralized medical data without sharing raw patient records?", ["Federated Learning", "Supervised Fine-Tuning", "Reinforcement Learning from Human Feedback", "Unsupervised Clustering"], 0),
-            ("What type of machine learning model is commonly used to predict patient readmission risk based on tabular clinical records?", ["Gradient Boosting / Random Forest", "Generative Adversarial Network", "StyleTransfer CNN", "Word2Vec Embedding"], 0)
-        ]
+    st.session_state.quiz_database = {
+        "Data Structures & Algorithms": [f"Quiz {i}" for i in range(1, 11)],
+        "Computer Networks": ["Quiz 1", "Quiz 2"], # Kept or configured as needed
+        "Digital Health & AI": ["Quiz 1", "Quiz 2"]
     }
-    
-    default_db = {}
-    for sub, q_list in subjects_data.items():
-        default_db[sub] = {}
-        for q_num in range(1, 11):
-            quiz_key = f"Quiz {q_num}"
-            quiz_questions = []
-            for j, (prompt, opts, c_idx) in enumerate(q_list, start=1):
-                quiz_questions.append({
-                    "id": q_num * 100 + j,
-                    "prompt": f"{prompt}",
-                    "options": opts,
-                    "correct_idx": c_idx,
-                    "points": 10.0
-                })
-            default_db[sub][quiz_key] = quiz_questions
-            
-    st.session_state.quiz_database = default_db
 
 if "leaderboard" not in st.session_state:
     st.session_state.leaderboard = []
@@ -204,21 +181,24 @@ if st.sidebar.button("🔄 Reset Quiz Data & Reload"):
 # -------------------------------------------------------------------
 # VIEW 1: STUDENT PORTAL (Shuffled Questions & Answer Options)
 # -------------------------------------------------------------------
+# -------------------------------------------------------------------
+# VIEW 1: STUDENT PORTAL
+# -------------------------------------------------------------------
 if nav == "Student Portal":
     st.subheader("📝 Take an Assessment")
 
     c1, c2 = st.columns(2)
     with c1:
-        student_name = st.text_input("Student Full Name", placeholder="e.g., Ali")
+        student_name = st.text_input("Student Full Name", placeholder="e.g., Ayesha Shahbaz")
     with c2:
-        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., F25-")
+        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., CS-2026-88")
 
     selected_subject = st.selectbox(
         "📚 Select Subject", 
         options=list(st.session_state.quiz_database.keys())
     )
 
-    available_quizzes = list(st.session_state.quiz_database[selected_subject].keys())
+    available_quizzes = st.session_state.quiz_database[selected_subject]
     selected_quiz_num = st.selectbox(
         "📋 Select Assessment Quiz", 
         options=available_quizzes
@@ -229,49 +209,59 @@ if nav == "Student Portal":
     else:
         st.divider()
         
-        session_key = f"shuffled_session_{selected_subject}_{selected_quiz_num}_{student_name}"
+        session_key = f"supabase_session_{selected_subject}_{selected_quiz_num}_{student_name}"
         
+        # Fetch from Supabase and apply randomization shuffle if not already loaded for this session
         if session_key not in st.session_state:
-            raw_questions = st.session_state.quiz_database[selected_subject][selected_quiz_num]
-            shuffled_questions = list(raw_questions)
-            random.shuffle(shuffled_questions)
-            
-            shuffled_mapping = {}
-            for q in shuffled_questions:
-                paired_opts = [(opt, idx == q["correct_idx"]) for idx, opt in enumerate(q["options"])]
-                random.shuffle(paired_opts)
+            if selected_subject == "Data Structures & Algorithms":
+                raw_questions = fetch_dsa_quiz_from_supabase(selected_quiz_num)
+            else:
+                # Fallback or stub for other subjects if they are still local
+                raw_questions = []
+
+            if not raw_questions:
+                st.warning(f"⚠️ No questions found in Supabase for `{selected_quiz_num}` under Data Structures & Algorithms. Please populate your `dsa_questions` table in Supabase.")
+                st.stop()
+            else:
+                shuffled_questions = list(raw_questions)
+                random.shuffle(shuffled_questions)
                 
-                new_opts = [item[0] for item in paired_opts]
-                new_correct_idx = next(i for i, item in enumerate(paired_opts) if item[1])
+                shuffled_mapping = {}
+                for q in shuffled_questions:
+                    paired_opts = [(opt, idx == q["correct_idx"]) for idx, opt in enumerate(q["options"])]
+                    random.shuffle(paired_opts)
+                    
+                    new_opts = [item[0] for item in paired_opts]
+                    new_correct_idx = next(i for i, item in enumerate(paired_opts) if item[1])
+                    
+                    shuffled_mapping[q["id"]] = {
+                        "prompt": q["prompt"],
+                        "points": float(q["points"]),
+                        "shuffled_options": new_opts,
+                        "new_correct_idx": new_correct_idx
+                    }
                 
-                shuffled_mapping[q["id"]] = {
-                    "prompt": q["prompt"],
-                    "points": q["points"],
-                    "shuffled_options": new_opts,
-                    "new_correct_idx": new_correct_idx
+                st.session_state[session_key] = {
+                    "questions": shuffled_questions,
+                    "mapping": shuffled_mapping
                 }
-            
-            st.session_state[session_key] = {
-                "questions": shuffled_questions,
-                "mapping": shuffled_mapping
-            }
 
         quiz_session = st.session_state[session_key]
         active_questions = quiz_session["questions"]
         shuffled_mapping = quiz_session["mapping"]
 
         with st.form("quiz_attempt_form", clear_on_submit=False):
-            st.markdown(f"### Current Exam: `{selected_subject} — {selected_quiz_num}` (Randomized Shuffle Active 🔀)")
+            st.markdown(f"### Current Exam: `{selected_subject} — {selected_quiz_num}` (Supabase Live Backend 🌐)")
             st.caption(f"Total Questions: {len(active_questions)}")
             st.write("")
 
             selected_options = {}
-            for q in active_questions:
+            for idx_q, q in enumerate(active_questions, start=1):
                 q_data = shuffled_mapping[q["id"]]
-                st.markdown(f"**Q{q['id']}: {q_data['prompt']}** `({q_data['points']} pts)`")
+                st.markdown(f"**Q{idx_q}: {q_data['prompt']}** `({q_data['points']} pts)`")
                 
                 selected = st.radio(
-                    f"Select option for Q{q['id']}:", 
+                    f"Select option for question {idx_q}:", 
                     q_data["shuffled_options"], 
                     key=f"q_choice_{session_key}_{q['id']}"
                 )
