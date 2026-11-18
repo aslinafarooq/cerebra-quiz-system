@@ -231,15 +231,16 @@ if nav == "Student Portal":
         
         # Fetch from Supabase and apply randomization shuffle if not already loaded for this session
         if session_key not in st.session_state:
-           if selected_subject in SUBJECT_TABLES:
-               raw_questions = fetch_quiz_from_supabase(selected_subject, selected_quiz_num)
-           else:
-                # Fallback for Object Oriented Programming or other local subjects
-                raw_questions = []
-        if not raw_questions:
-                st.warning(f"⚠️ No questions found in Supabase for `{selected_quiz_num}` under Data Structures & Algorithms. Please populate your `dsa_questions` table in Supabase.")
+            # Initialize raw_questions safely first
+            raw_questions = []
+            
+            if selected_subject in SUBJECT_TABLES:
+                raw_questions = fetch_quiz_from_supabase(selected_subject, selected_quiz_num)
+
+            if not raw_questions:
+                st.warning(f"⚠️ No questions found in Supabase for `{selected_quiz_num}` under `{selected_subject}`. Please populate your database table.")
                 st.stop()
-        else:
+            else:
                 shuffled_questions = list(raw_questions)
                 random.shuffle(shuffled_questions)
                 
@@ -262,7 +263,6 @@ if nav == "Student Portal":
                     "questions": shuffled_questions,
                     "mapping": shuffled_mapping
                 }
-
         quiz_session = st.session_state[session_key]
         active_questions = quiz_session["questions"]
         shuffled_mapping = quiz_session["mapping"]
