@@ -239,10 +239,10 @@ if nav == "Student Portal":
            else:
                 # Fallback for Object Oriented Programming or other local subjects
                 raw_questions = []
-            if not raw_questions:
+        if not raw_questions:
                 st.warning(f"⚠️ No questions found in Supabase for `{selected_quiz_num}` under Data Structures & Algorithms. Please populate your `dsa_questions` table in Supabase.")
                 st.stop()
-            else:
+        else:
                 shuffled_questions = list(raw_questions)
                 random.shuffle(shuffled_questions)
                 
