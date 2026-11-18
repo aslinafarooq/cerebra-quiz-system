@@ -55,19 +55,16 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-        /* Import a clean modern font from Google Fonts */
-        @import url('[https://fonts.googleapis.com/css2?
-        family=Inter:wght@400;500;600;700&display=swap]
-        (https://fonts.googleapis.com/css2?
-        family=Inter:wght@400;500;600;700&display=swap)');
+        /* Import Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        /* Apply the font globally to all app elements, text, buttons, and headers */
+        /* Apply Inter globally */
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif !important;
         }
 
-      /* Restored Teal, Blue, & Purple Gradient Background */
-        .stApp {
+        /* Force background gradient across Streamlit containers */
+        .stApp, [data-testid="stAppViewContainer"] {
             background: linear-gradient(135deg, #E6FFFA 0%, #E0F2FE 50%, #F5F3FF 100%) !important;
         }
 
