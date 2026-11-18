@@ -25,9 +25,17 @@ def init_supabase() -> Client:
 supabase = init_supabase()
 
 # Helper function to fetch DSA questions dynamically from Supabase
-def fetch_dsa_quiz_from_supabase(quiz_name):
+SUBJECT_TABLES = {
+    "Data Structures & Algorithms": "dsa_questions",
+    "Computer Networks": "cn_questions"
+}
+
+def fetch_quiz_from_supabase(subject_name, quiz_name):
+    table_name = SUBJECT_TABLES.get(subject_name)
+    if not table_name:
+        return []
     try:
-        response = supabase.table("dsa_questions") \
+        response = supabase.table(table_name) \
             .select("*") \
             .eq("quiz_name", quiz_name) \
             .execute()
@@ -58,9 +66,11 @@ st.markdown("""
             font-family: 'Inter', sans-serif !important;
         }
 
+      /* Restored Teal, Blue, & Purple Gradient Background */
         .stApp {
             background: linear-gradient(135deg, #E6FFFA 0%, #E0F2FE 50%, #F5F3FF 100%) !important;
         }
+
         .app-header {
             background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
             padding: 2.2rem;
@@ -69,17 +79,20 @@ st.markdown("""
             box-shadow: 0 12px 30px -5px rgba(99, 102, 241, 0.4);
             margin-bottom: 2rem;
         }
+        
         .app-header h1 {
             color: #FFFFFF !important;
             font-size: 2.6rem !important;
             font-weight: 800 !important;
             margin: 0 !important;
         }
+        
         .app-header p {
             color: #F3E8FF !important;
             font-size: 1.1rem !important;
             margin-top: 0.5rem !important;
         }
+        
         div[role="radiogroup"] {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(10px);
@@ -88,6 +101,7 @@ st.markdown("""
             border: 1px solid rgba(178, 245, 234, 0.6);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
         }
+        
         .stButton>button, .stFormSubmitButton>button {
             background: linear-gradient(90deg, #6366F1 0%, #8B5CF6 100%) !important;
             color: white !important;
@@ -160,7 +174,7 @@ cpp_engine = load_cpp()
 if "quiz_database" not in st.session_state:
     st.session_state.quiz_database = {
         "Data Structures & Algorithms": [f"Quiz {i}" for i in range(1, 11)],
-        "Computer Networks": ["Quiz 1", "Quiz 2"], # Kept or configured as neededF
+        "Computer Networks": [f"Quiz {i}" for i in range(1, 11)],
     }
 
 if "leaderboard" not in st.session_state:
@@ -220,12 +234,11 @@ if nav == "Student Portal":
         
         # Fetch from Supabase and apply randomization shuffle if not already loaded for this session
         if session_key not in st.session_state:
-            if selected_subject == "Data Structures & Algorithms":
-                raw_questions = fetch_dsa_quiz_from_supabase(selected_quiz_num)
-            else:
-                # Fallback or stub for other subjects if they are still local
+           if selected_subject in SUBJECT_TABLES:
+               raw_questions = fetch_quiz_from_supabase(selected_subject, selected_quiz_num)
+           else:
+                # Fallback for Object Oriented Programming or other local subjects
                 raw_questions = []
-
             if not raw_questions:
                 st.warning(f"⚠️ No questions found in Supabase for `{selected_quiz_num}` under Data Structures & Algorithms. Please populate your `dsa_questions` table in Supabase.")
                 st.stop()
@@ -474,7 +487,7 @@ elif nav == "Instructor Dashboard":
                                 "prompt": pq["prompt"],
                                 "options": pq["options"],
                                 "correct_idx": pq["correct_idx"],
-                                "points": 10.0
+                                "points": 1.0
                             }).execute()
                             added_count += 1
                         except Exception as e:
