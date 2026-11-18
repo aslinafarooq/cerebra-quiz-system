@@ -47,6 +47,17 @@ st.set_page_config(
 
 st.markdown("""
     <style>
+        /* Import a clean modern font from Google Fonts */
+        @import url('[https://fonts.googleapis.com/css2?
+        family=Inter:wght@400;500;600;700&display=swap]
+        (https://fonts.googleapis.com/css2?
+        family=Inter:wght@400;500;600;700&display=swap)');
+
+        /* Apply the font globally to all app elements, text, buttons, and headers */
+        html, body, [class*="css"] {
+            font-family: 'Inter', sans-serif !important;
+        }
+
         .stApp {
             background: linear-gradient(135deg, #E6FFFA 0%, #E0F2FE 50%, #F5F3FF 100%) !important;
         }
@@ -86,17 +97,8 @@ st.markdown("""
             font-weight: 700 !important;
             box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
         }
-        div[data-testid="stMetric"] {
-            background-color: rgba(255, 255, 255, 0.85) !important;
-            backdrop-filter: blur(10px);
-            border-radius: 14px !important;
-            padding: 1.2rem !important;
-            border-left: 6px solid #319795 !important;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-        }
     </style>
 """, unsafe_allow_html=True)
-
 # -------------------------------------------------------------------
 # 2. CROSS-PLATFORM C++ ENGINE LOADER WITH SMART PYTHON FALLBACK
 # -------------------------------------------------------------------
@@ -158,8 +160,7 @@ cpp_engine = load_cpp()
 if "quiz_database" not in st.session_state:
     st.session_state.quiz_database = {
         "Data Structures & Algorithms": [f"Quiz {i}" for i in range(1, 11)],
-        "Computer Networks": ["Quiz 1", "Quiz 2"], # Kept or configured as needed
-        "Digital Health & AI": ["Quiz 1", "Quiz 2"]
+        "Computer Networks": ["Quiz 1", "Quiz 2"], # Kept or configured as neededF
     }
 
 if "leaderboard" not in st.session_state:
@@ -171,7 +172,7 @@ if "leaderboard" not in st.session_state:
 st.markdown("""
     <div class="app-header">
         <h1>🎓 Cerebra Assessment Platform</h1>
-        <p>Powered by Randomized Shuffling Algorithms & Streamlit Cloud</p>
+        <p>Showcasing Basic C++ Data Structures with Streamlit</p>
     </div>
 """, unsafe_allow_html=True)
 
