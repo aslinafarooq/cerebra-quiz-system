@@ -426,23 +426,47 @@ elif nav == "Instructor Dashboard":
 
                 lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
 
+                if st.button("🚀 Parse Real MCQs & Insert into Supabase"):
+                import re
+
+                target_table = SUBJECT_TABLES.get(parse_subject)
+                if not target_table:
+                    st.error(f"No table mapped for subject: `{parse_subject}`.")
+                    st.stop()
+
+                lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
+
+                # --- START: Replace your old parsing loop with this ---
                 parsed_questions = []
+                skipped_blocks = []
                 current_q = None
                 current_options = []
                 correct_idx = 0
 
+                def flush_block():
+                    nonlocal current_q, current_options, correct_idx
+                    if current_q is None and not current_options:
+                        return
+                    if current_q and len(current_options) >= 2:
+                        parsed_questions.append({
+                            "prompt": current_q,
+                            "options": current_options[:4],
+                            "correct_idx": min(correct_idx, len(current_options) - 1),
+                        })
+                    else:
+                        skipped_blocks.append({
+                            "prompt": current_q or "(No question prompt)",
+                            "options_found": len(current_options),
+                        })
+                    current_q = None
+                    current_options = []
+                    correct_idx = 0
+
                 for line in lines:
                     q_match = re.match(r"^(\d+)[.)]\s+(.*)", line)
                     if q_match:
-                        if current_q and len(current_options) >= 2:
-                            parsed_questions.append({
-                                "prompt": current_q,
-                                "options": current_options[:4],
-                                "correct_idx": min(correct_idx, len(current_options) - 1),
-                            })
+                        flush_block()
                         current_q = q_match.group(2).strip()
-                        current_options = []
-                        correct_idx = 0
                         continue
 
                     opt_match = re.match(r"^\(?([a-dA-D])[.)]\s+(.*)", line)
@@ -458,15 +482,17 @@ elif nav == "Instructor Dashboard":
                     if ans_match and current_q:
                         correct_idx = ord(ans_match.group(1).lower()) - ord("a")
 
-                if current_q and len(current_options) >= 2:
-                    parsed_questions.append({
-                        "prompt": current_q,
-                        "options": current_options[:4],
-                        "correct_idx": min(correct_idx, len(current_options) - 1),
-                    })
+                flush_block()
+
+                if skipped_blocks:
+                    with st.expander(f"⚠️ Skipped {len(skipped_blocks)} blocks (click to inspect)"):
+                        for item in skipped_blocks:
+                            st.write(f"- **Options found:** {item['options_found']} | **Prompt:** {item['prompt']}")
+                # --- END: Parsing & skipped blocks display ---
 
                 st.info(f"Detected **{len(parsed_questions)}** structured MCQs. Target table: **`{target_table}`**, Quiz: **`{parse_quiz}`**")
 
+                # Keep your existing Supabase insertion loop right below here
                 added_count = 0
                 for idx, pq in enumerate(parsed_questions, start=1):
                     options = list(pq["options"])
@@ -478,7 +504,7 @@ elif nav == "Instructor Dashboard":
                         "prompt": pq["prompt"],
                         "options": options,
                         "correct_idx": int(pq["correct_idx"]),
-                        "points": 1.0,
+                        "points": 10.0,
                     }
                     try:
                         res = supabase.table(target_table).insert(payload).execute()
