@@ -163,9 +163,6 @@ def load_cpp():
 cpp_engine = load_cpp()
 
 # -------------------------------------------------------------------
-# 3. REALISTIC QUESTION BANK (Quiz 1-10 per Subject)
-# -------------------------------------------------------------------
-# -------------------------------------------------------------------
 # QUIZ DATABASE INITIALIZATION
 # -------------------------------------------------------------------
 if "quiz_database" not in st.session_state:
@@ -178,7 +175,7 @@ if "leaderboard" not in st.session_state:
     st.session_state.leaderboard = []
 
 # -------------------------------------------------------------------
-# 4. HEADER & SIDEBAR NAVIGATION
+# 3. HEADER & SIDEBAR NAVIGATION
 # -------------------------------------------------------------------
 st.markdown("""
     <div class="app-header">
@@ -199,17 +196,14 @@ if st.sidebar.button("🔄 Reset Quiz Data & Reload"):
 # -------------------------------------------------------------------
 # VIEW 1: STUDENT PORTAL (Shuffled Questions & Answer Options)
 # -------------------------------------------------------------------
-# -------------------------------------------------------------------
-# VIEW 1: STUDENT PORTAL
-# -------------------------------------------------------------------
 if nav == "Student Portal":
     st.subheader("📝 Take an Assessment")
 
     c1, c2 = st.columns(2)
     with c1:
-        student_name = st.text_input("Student Full Name", placeholder="e.g., Ayesha Shahbaz")
+        student_name = st.text_input("Student Full Name", placeholder="e.g., Ali")
     with c2:
-        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., CS-2026-88")
+        roll_no = st.text_input("Roll / Registration Number", placeholder="e.g., F25-")
 
     selected_subject = st.selectbox(
         "📚 Select Subject", 
