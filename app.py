@@ -416,80 +416,146 @@ elif nav == "Instructor Dashboard":
             st.text_area("🔍 Extracted Document Preview", extracted_text[:2000], height=250)
 
             if st.button("🚀 Parse Real MCQs & Insert into Supabase"):
-                import re
+            import re
 
-                # Resolve target Supabase table right here using the selected subject
-                target_table = SUBJECT_TABLES.get(parse_subject)
-                if not target_table:
-                    st.error(f"No table mapped for subject: `{parse_subject}`.")
-                    st.stop()
+            target_table = SUBJECT_TABLES.get(parse_subject)
+            if not target_table:
+                st.error(f"No table mapped for subject: `{parse_subject}`.")
+                st.stop()
 
-                lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
+            if not extracted_text or not extracted_text.strip():
+                st.error("No text was extracted from the uploaded file.")
+                st.stop()
 
-                parsed_questions = []
-                current_q = None
-                current_options = []
-                correct_idx = 0
+            raw_lines = [re.sub(r"\s+", " ", ln).strip() for ln in extracted_text.splitlines()]
+            lines = [ln for ln in raw_lines if ln]
 
-                for line in lines:
-                    q_match = re.match(r"^(\d+)[.)]\s+(.*)", line)
-                    if q_match:
-                        if current_q and len(current_options) >= 2:
-                            parsed_questions.append({
-                                "prompt": current_q,
-                                "options": current_options[:4],
-                                "correct_idx": min(correct_idx, len(current_options) - 1),
-                            })
-                        current_q = q_match.group(2).strip()
-                        current_options = []
-                        correct_idx = 0
-                        continue
+            parsed_questions = []
+            skipped_items = []
 
-                    opt_match = re.match(r"^\(?([a-dA-D])[.)]\s+(.*)", line)
-                    if opt_match and current_q:
-                        current_options.append(opt_match.group(2).strip())
-                        continue
+            current_q = None
+            current_options = []
+            correct_idx = 0
+            last_target = None
+            block_preview = ""
 
-                    ans_match = re.search(
-                        r"\b(?:Answer|Ans|Correct(?:\s+Option)?)\s*[:\-–]?\s*\(?([a-dA-D])\)?\b",
-                        line,
-                        re.IGNORECASE,
-                    )
-                    if ans_match and current_q:
-                        correct_idx = ord(ans_match.group(1).lower()) - ord("a")
-
-                if current_q and len(current_options) >= 2:
+            def save_if_valid(q_text, opts, ans_idx, raw_preview):
+                if q_text and len(opts) >= 2:
+                    clean_opts = opts[:4]
+                    safe_idx = min(max(int(ans_idx), 0), len(clean_opts) - 1)
                     parsed_questions.append({
-                        "prompt": current_q,
-                        "options": current_options[:4],
-                        "correct_idx": min(correct_idx, len(current_options) - 1),
+                        "prompt": q_text,
+                        "options": clean_opts,
+                        "correct_idx": safe_idx,
+                    })
+                elif q_text or opts:
+                    skipped_items.append({
+                        "prompt": q_text or "(Missing question text)",
+                        "options_found": len(opts),
+                        "preview": raw_preview[:180],
                     })
 
-                st.info(f"Detected **{len(parsed_questions)}** structured MCQs. Target table: **`{target_table}`**, Quiz: **`{parse_quiz}`**")
+            q_start_re = re.compile(r"^(?:Q(?:uestion)?\s*)?(\d{1,3})\s*[.):\-]\s*(.+)$", re.IGNORECASE)
+            opt_inline_re = re.compile(r"(?:^|\s)\(?([a-dA-D])\s*[.):\-]\s*(.+?)(?=(?:\s+\(?[a-dA-D]\s*[.):\-]\s*)|$)")
+            opt_single_re = re.compile(r"^\(?([a-dA-D])\s*[.):\-]\s*(.+)$")
+            ans_re = re.compile(
+                r"\b(?:Answer|Ans|Correct\s*(?:Option|Choice|Answer)?|Key)\s*[:\-–=]?\s*\(?([a-dA-D])\)?\b",
+                re.IGNORECASE,
+            )
+            ans_only_line_re = re.compile(r"^(?:Answer|Ans|Correct)\s*[:\-–=]?\s*\(?([a-dA-D])\)?$", re.IGNORECASE)
 
-                added_count = 0
-                for idx, pq in enumerate(parsed_questions, start=1):
-                    options = list(pq["options"])
-                    while len(options) < 4:
-                        options.append(f"Option {len(options) + 1}")
+            for line in lines:
+                q_match = q_start_re.match(line)
+                if q_match and not opt_single_re.match(line):
+                    save_if_valid(current_q, current_options, correct_idx, block_preview)
+                    current_q = q_match.group(2).strip()
+                    current_options = []
+                    correct_idx = 0
+                    last_target = "question"
+                    block_preview = line
+                    continue
 
-                    payload = {
-                        "quiz_name": parse_quiz,
-                        "prompt": pq["prompt"],
-                        "options": options,
-                        "correct_idx": int(pq["correct_idx"]),
-                        "points": 1.0,
-                    }
-                    try:
-                        res = supabase.table(target_table).insert(payload).execute()
-                        if res.data:
-                            added_count += 1
-                        else:
-                            st.warning(f"Row {idx} returned no inserted data.")
-                    except Exception as e:
-                        st.error(f"Row {idx} failed to insert into `{target_table}`: {e}")
+                if current_q is None:
+                    continue
 
-                if added_count > 0:
-                    st.success(f"Inserted **{added_count}** questions into `{target_table}` for `{parse_quiz}`.")
-                elif not parsed_questions:
-                    st.warning("0 MCQs matched the parser pattern.")
+                block_preview += " | " + line
+
+                ans_only = ans_only_line_re.match(line)
+                if ans_only:
+                    correct_idx = ord(ans_only.group(1).lower()) - ord("a")
+                    last_target = None
+                    continue
+
+                ans_match = ans_re.search(line)
+                line_without_ans = ans_re.sub("", line).strip(" .;-–") if ans_match else line
+                if ans_match:
+                    correct_idx = ord(ans_match.group(1).lower()) - ord("a")
+
+                if not line_without_ans:
+                    continue
+
+                inline_matches = list(opt_inline_re.finditer(line_without_ans))
+                if len(inline_matches) >= 2:
+                    for m in inline_matches:
+                        opt_text = m.group(2).strip(" ;,")
+                        if opt_text:
+                            current_options.append(opt_text)
+                    last_target = "option"
+                    continue
+
+                opt_match = opt_single_re.match(line_without_ans)
+                if opt_match:
+                    current_options.append(opt_match.group(2).strip())
+                    last_target = "option"
+                    continue
+
+                if last_target == "option" and current_options:
+                    current_options[-1] = f"{current_options[-1]} {line_without_ans}".strip()
+                elif last_target == "question":
+                    current_q = f"{current_q} {line_without_ans}".strip()
+
+            save_if_valid(current_q, current_options, correct_idx, block_preview)
+
+            st.info(
+                f"Parsed **{len(parsed_questions)}** MCQs | "
+                f"Skipped **{len(skipped_items)}** | "
+                f"Table: **`{target_table}`** | "
+                f"Quiz: **`{parse_quiz}`**"
+            )
+
+            if skipped_items:
+                with st.expander(f"⚠️ View {len(skipped_items)} skipped blocks"):
+                    for item in skipped_items:
+                        st.write(
+                            f"- **Options found:** {item['options_found']} | "
+                            f"**Prompt:** {item['prompt']} | "
+                            f"**Raw:** `{item['preview']}`"
+                        )
+
+            inserted = 0
+            for idx, pq in enumerate(parsed_questions, start=1):
+                opts = list(pq["options"])
+                while len(opts) < 4:
+                    opts.append(f"Option {len(opts) + 1}")
+
+                row = {
+                    "quiz_name": parse_quiz,
+                    "prompt": pq["prompt"],
+                    "options": opts,
+                    "correct_idx": int(pq["correct_idx"]),
+                    "points": 10.0,
+                }
+
+                try:
+                    resp = supabase.table(target_table).insert(row).execute()
+                    if resp.data:
+                        inserted += 1
+                    else:
+                        st.warning(f"Q{idx}: Sent to `{target_table}` but returned empty response data.")
+                except Exception as err:
+                    st.error(f"Q{idx} failed inserting into `{target_table}`: {err}")
+
+            if inserted > 0:
+                st.success(f"✅ Successfully inserted **{inserted}** questions into `{target_table}` ({parse_quiz}).")
+            elif parsed_questions:
+                st.error("❌ MCQs were parsed, but 0 rows were inserted. Check the red error messages above.")
