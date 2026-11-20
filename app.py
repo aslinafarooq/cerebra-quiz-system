@@ -385,7 +385,7 @@ elif nav == "Instructor Dashboard":
                 else:
                     st.success("Success! Question validated.")
 
-with tab2:
+    with tab2:
         st.markdown("### 📄 Smart Document-to-Quiz Parser (PDF / DOCX)")
         st.caption("Upload lecture sheets or MCQs (with a, b, c, d options and Answer keys) to automatically extract and push them to Supabase.")
 
