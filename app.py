@@ -424,7 +424,7 @@ elif nav == "Instructor Dashboard":
                     st.stop()
 
                 lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
-                
+
                 parsed_questions = []
                 skipped_blocks = []
                 current_q = None
@@ -438,7 +438,7 @@ elif nav == "Instructor Dashboard":
                         parsed_questions.append({
                             "prompt": q_text,
                             "options": opts[:4],
-                            "correct_idx": min(ans_idx, len(opts) - 1),
+                            "correct_idx": min(max(ans_idx, 0), len(opts) - 1),
                         })
                     else:
                         skipped_blocks.append({
@@ -473,15 +473,17 @@ elif nav == "Instructor Dashboard":
                     current_q, current_options, correct_idx
                 )
 
+                st.info(
+                    f"Detected **{len(parsed_questions)}** structured MCQs | "
+                    f"Skipped **{len(skipped_blocks)}** blocks | "
+                    f"Target table: **`{target_table}`** (`{parse_quiz}`)"
+                )
+
                 if skipped_blocks:
-                    with st.expander(f"⚠️ Skipped {len(skipped_blocks)} blocks (click to inspect)"):
+                    with st.expander(f"⚠️ Inspect {len(skipped_blocks)} skipped blocks"):
                         for item in skipped_blocks:
                             st.write(f"- **Options found:** {item['options_found']} | **Prompt:** {item['prompt']}")
-                # --- END: Parsing & skipped blocks display ---
 
-                st.info(f"Detected **{len(parsed_questions)}** structured MCQs. Target table: **`{target_table}`**, Quiz: **`{parse_quiz}`**")
-
-                # Keep your existing Supabase insertion loop right below here
                 added_count = 0
                 for idx, pq in enumerate(parsed_questions, start=1):
                     options = list(pq["options"])
@@ -495,16 +497,19 @@ elif nav == "Instructor Dashboard":
                         "correct_idx": int(pq["correct_idx"]),
                         "points": 10.0,
                     }
+
                     try:
                         res = supabase.table(target_table).insert(payload).execute()
-                        if res.data:
+                        if res.data is not None and len(res.data) > 0:
                             added_count += 1
                         else:
-                            st.warning(f"Row {idx} returned no inserted data.")
+                            st.warning(f"Row {idx}: Insert executed, but no row data was returned.")
                     except Exception as e:
                         st.error(f"Row {idx} failed to insert into `{target_table}`: {e}")
 
                 if added_count > 0:
                     st.success(f"Inserted **{added_count}** questions into `{target_table}` for `{parse_quiz}`.")
-                elif not parsed_questions:
-                    st.warning("0 MCQs matched the parser pattern.")
+                elif parsed_questions:
+                    st.error("Questions were parsed, but 0 rows were inserted. Check the red error messages above.")
+                else:
+                    st.warning("0 structured MCQs were detected from the uploaded file.")
