@@ -56,6 +56,17 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+        /* Question text, headings, and labels on the light main area */
+        .stMain [data-testid="stMarkdownContainer"] p,
+        .stMain [data-testid="stMarkdownContainer"] h1,
+        .stMain [data-testid="stMarkdownContainer"] h2,
+        .stMain [data-testid="stMarkdownContainer"] h3,
+        .stMain [data-testid="stMarkdownContainer"] h4,
+        .stMain [data-testid="stWidgetLabel"] p,
+        .stMain [data-testid="stWidgetLabel"] label {
+            color: #0F172A !important;
+        }
+        
         /* Keep text dark inside light radio / card containers */
         [data-testid="stRadio"] label,
         [data-testid="stRadio"] p,
