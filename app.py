@@ -56,18 +56,19 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+        /* Headings, questions, and labels on light main content areas */
         div.stMain h1,
         div.stMain h2,
         div.stMain h3,
-        div.stMain [data-testid="stHeading"] * {
-        color: #0F172A !important;
+        div.stMain h4,
+        div.stMain [data-testid="stHeading"] *,
+        div.stMain [data-testid="stMarkdownContainer"] p,
+        div.stMain [data-testid="stWidgetLabel"] p,
+        div.stMain [data-testid="stWidgetLabel"] label {
+            color: #0F172A !important;
         }
 
-        <div style="background-color: #1E293B; color: #F8FAFC; padding: 14px 18px; border-radius: 10px; font-size: 16px;">
-        No quiz submissions recorded yet! Complete a quiz in the Student Portal to see your rank.
-        </div>
-        
-        /* Keep text dark inside light radio / card containers */
+        /* Radio option labels and choices */
         [data-testid="stRadio"] label,
         [data-testid="stRadio"] p,
         [data-testid="stRadio"] span,
@@ -75,14 +76,24 @@ st.markdown(
             color: #0F172A !important;
         }
 
-        /* High-contrast info/alert banner in both Light and Dark mode */
-        .stMain [data-testid="stAlert"] {
+        /* Alert / info / status banners with a fixed dark slate background */
+        div.stMain div[data-testid="stAlert"],
+        div.stMain div[data-testid="stAlert"] > div,
+        div.stMain div[data-testid="stNotification"],
+        div.stMain div[data-testid="stNotification"] > div {
             background-color: #1E293B !important;
+            color: #F8FAFC !important;
             border-radius: 10px !important;
         }
-        .stMain [data-testid="stAlert"] p,
-        .stMain [data-testid="stAlert"] span,
-        .stMain [data-testid="stAlert"] div {
+
+        div.stMain div[data-testid="stAlert"] p,
+        div.stMain div[data-testid="stAlert"] span,
+        div.stMain div[data-testid="stAlert"] a,
+        div.stMain div[data-testid="stAlert"] label,
+        div.stMain div[data-testid="stNotification"] p,
+        div.stMain div[data-testid="stNotification"] span,
+        div.stMain div[data-testid="stNotification"] a,
+        div.stMain div[data-testid="stNotification"] label {
             color: #F8FAFC !important;
         }
         
