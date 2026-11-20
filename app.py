@@ -56,6 +56,18 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+        div.stMain div[data-testid="stAlert"],
+        div.stMain div[data-testid="stAlert"] > div {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+            border-radius: 10px !important;
+        }
+        div.stMain div[data-testid="stAlert"] p,
+        div.stMain div[data-testid="stAlert"] span,
+        div.stMain div[data-testid="stAlert"] a,
+        div.stMain div[data-testid="stAlert"] label {
+            color: #F8FAFC !important;
+        }
         
         /* Keep text dark inside light radio / card containers */
         [data-testid="stRadio"] label,
@@ -130,18 +142,6 @@ st.markdown(
             box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
         }
 
-        div.stMain div[data-testid="stAlert"],
-        div.stMain div[data-testid="stAlert"] > div {
-            background-color: #1E293B !important;
-            color: #F8FAFC !important;
-            border-radius: 10px !important;
-        }
-        div.stMain div[data-testid="stAlert"] p,
-        div.stMain div[data-testid="stAlert"] span,
-        div.stMain div[data-testid="stAlert"] a,
-        div.stMain div[data-testid="stAlert"] label {
-            color: #F8FAFC !important;
-        }
     </style>
 """, unsafe_allow_html=True)
 # -------------------------------------------------------------------
