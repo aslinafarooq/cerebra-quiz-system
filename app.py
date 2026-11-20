@@ -53,8 +53,17 @@ st.set_page_config(
     layout="wide"
 )
 
-st.markdown("""
+st.markdown(
+    """
     <style>
+        /* Keep text dark inside light radio / card containers */
+        [data-testid="stRadio"] label,
+        [data-testid="stRadio"] p,
+        [data-testid="stRadio"] span,
+        [data-testid="stRadio"] div {
+            color: #0F172A !important;
+        }
+
         /* Import Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
