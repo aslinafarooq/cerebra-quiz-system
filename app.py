@@ -56,16 +56,6 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        /* Question text, headings, and labels on the light main area */
-        .stMain [data-testid="stMarkdownContainer"] p,
-        .stMain [data-testid="stMarkdownContainer"] h1,
-        .stMain [data-testid="stMarkdownContainer"] h2,
-        .stMain [data-testid="stMarkdownContainer"] h3,
-        .stMain [data-testid="stMarkdownContainer"] h4,
-        .stMain [data-testid="stWidgetLabel"] p,
-        .stMain [data-testid="stWidgetLabel"] label {
-            color: #0F172A !important;
-        }
         
         /* Keep text dark inside light radio / card containers */
         [data-testid="stRadio"] label,
@@ -75,11 +65,15 @@ st.markdown(
             color: #0F172A !important;
         }
 
-        /* Keep info/alert banner text readable on dark alert backgrounds */
+        /* High-contrast info/alert banner in both Light and Dark mode */
+        .stMain [data-testid="stAlert"] {
+            background-color: #1E293B !important;
+            border-radius: 10px !important;
+        }
         .stMain [data-testid="stAlert"] p,
         .stMain [data-testid="stAlert"] span,
         .stMain [data-testid="stAlert"] div {
-            color: #E2E8F0 !important;
+            color: #F8FAFC !important;
         }
         
         /* Import Inter font */
@@ -134,6 +128,19 @@ st.markdown(
             border-radius: 10px !important;
             font-weight: 700 !important;
             box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3) !important;
+        }
+
+        div.stMain div[data-testid="stAlert"],
+        div.stMain div[data-testid="stAlert"] > div {
+            background-color: #1E293B !important;
+            color: #F8FAFC !important;
+            border-radius: 10px !important;
+        }
+        div.stMain div[data-testid="stAlert"] p,
+        div.stMain div[data-testid="stAlert"] span,
+        div.stMain div[data-testid="stAlert"] a,
+        div.stMain div[data-testid="stAlert"] label {
+            color: #F8FAFC !important;
         }
     </style>
 """, unsafe_allow_html=True)
