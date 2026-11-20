@@ -56,18 +56,16 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        div.stMain div[data-testid="stAlert"],
-        div.stMain div[data-testid="stAlert"] > div {
-            background-color: #1E293B !important;
-            color: #F8FAFC !important;
-            border-radius: 10px !important;
+        div.stMain h1,
+        div.stMain h2,
+        div.stMain h3,
+        div.stMain [data-testid="stHeading"] * {
+        color: #0F172A !important;
         }
-        div.stMain div[data-testid="stAlert"] p,
-        div.stMain div[data-testid="stAlert"] span,
-        div.stMain div[data-testid="stAlert"] a,
-        div.stMain div[data-testid="stAlert"] label {
-            color: #F8FAFC !important;
-        }
+
+        <div style="background-color: #1E293B; color: #F8FAFC; padding: 14px 18px; border-radius: 10px; font-size: 16px;">
+        No quiz submissions recorded yet! Complete a quiz in the Student Portal to see your rank.
+        </div>
         
         /* Keep text dark inside light radio / card containers */
         [data-testid="stRadio"] label,
