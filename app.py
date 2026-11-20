@@ -418,25 +418,13 @@ elif nav == "Instructor Dashboard":
             if st.button("🚀 Parse Real MCQs & Insert into Supabase"):
                 import re
 
-                # Resolve target Supabase table right here using the selected subject
                 target_table = SUBJECT_TABLES.get(parse_subject)
                 if not target_table:
                     st.error(f"No table mapped for subject: `{parse_subject}`.")
                     st.stop()
 
                 lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
-
-                if st.button("🚀 Parse Real MCQs & Insert into Supabase"):
-                import re
-
-                target_table = SUBJECT_TABLES.get(parse_subject)
-                if not target_table:
-                    st.error(f"No table mapped for subject: `{parse_subject}`.")
-                    st.stop()
-
-                lines = [line.strip() for line in extracted_text.splitlines() if line.strip()]
-
-                # --- START: Replace your old parsing loop with this ---
+                
                 parsed_questions = []
                 skipped_blocks = []
                 current_q = None
