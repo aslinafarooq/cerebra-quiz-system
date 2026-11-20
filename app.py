@@ -359,7 +359,7 @@ elif nav == "Instructor Dashboard":
     st.subheader("⚙️ Faculty Dashboard & Question Bank")
     st.caption("Manage question pools manually or parse lecture documents to automatically append questions.")
 
-    tab1, tab2 = st.tabs(["✍️ Manual Question Entry", "📁 Bulk Import from PDF / DOCX"])
+    tab1, tab2 = st.tabs(["📝 Take Quiz", "📄 Import MCQs"])
 
     with tab1:
         st.markdown("### Add Single Question")
