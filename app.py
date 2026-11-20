@@ -431,29 +431,28 @@ elif nav == "Instructor Dashboard":
                 current_options = []
                 correct_idx = 0
 
-                def flush_block():
-                    nonlocal current_q, current_options, correct_idx
-                    if current_q is None and not current_options:
-                        return
-                    if current_q and len(current_options) >= 2:
+                def flush_block(q_text, opts, ans_idx):
+                    if q_text is None and not opts:
+                        return None, [], 0
+                    if q_text and len(opts) >= 2:
                         parsed_questions.append({
-                            "prompt": current_q,
-                            "options": current_options[:4],
-                            "correct_idx": min(correct_idx, len(current_options) - 1),
+                            "prompt": q_text,
+                            "options": opts[:4],
+                            "correct_idx": min(ans_idx, len(opts) - 1),
                         })
                     else:
                         skipped_blocks.append({
-                            "prompt": current_q or "(No question prompt)",
-                            "options_found": len(current_options),
+                            "prompt": q_text or "(No question prompt)",
+                            "options_found": len(opts),
                         })
-                    current_q = None
-                    current_options = []
-                    correct_idx = 0
+                    return None, [], 0
 
                 for line in lines:
                     q_match = re.match(r"^(\d+)[.)]\s+(.*)", line)
                     if q_match:
-                        flush_block()
+                        current_q, current_options, correct_idx = flush_block(
+                            current_q, current_options, correct_idx
+                        )
                         current_q = q_match.group(2).strip()
                         continue
 
@@ -470,7 +469,9 @@ elif nav == "Instructor Dashboard":
                     if ans_match and current_q:
                         correct_idx = ord(ans_match.group(1).lower()) - ord("a")
 
-                flush_block()
+                current_q, current_options, correct_idx = flush_block(
+                    current_q, current_options, correct_idx
+                )
 
                 if skipped_blocks:
                     with st.expander(f"⚠️ Skipped {len(skipped_blocks)} blocks (click to inspect)"):
