@@ -75,6 +75,13 @@ st.markdown(
             color: #0F172A !important;
         }
 
+        /* Keep info/alert banner text readable on dark alert backgrounds */
+        .stMain [data-testid="stAlert"] p,
+        .stMain [data-testid="stAlert"] span,
+        .stMain [data-testid="stAlert"] div {
+            color: #E2E8F0 !important;
+        }
+        
         /* Import Inter font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
